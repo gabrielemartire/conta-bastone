@@ -1,0 +1,9 @@
+{
+  "name": "conta-bastone",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute conta-bastone --remote --file=schema.sql"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "conta-bastone",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-04-01",
+  "account_id": "b3bb0a8c0f588ce17eeb7ebf5c940d0e",
+  "assets": { "directory": "./public" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "conta-bastone",
+      "database_id": "64931179-09fa-47d0-bb47-f1ca3f245e12"
+    }
+  ]
+}

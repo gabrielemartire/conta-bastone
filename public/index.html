@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#020807">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Conta Bastone</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♣</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #020807;
+    --radar: #19ffb0;
+    --radar-dim: rgba(25, 255, 176, 0.18);
+    --hot: #ff2bd6;
+    --ascii: rgba(255, 43, 214, 0.34);
+    --font: "Share Tech Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: radial-gradient(ellipse at center, #04201a 0%, var(--bg) 70%);
+    background-color: var(--bg);
+    color: var(--radar);
+    font-family: var(--font);
+    user-select: none; -webkit-user-select: none;
+    overscroll-behavior: none;
+  }
+  #ascii {
+    position: fixed; left: 0; top: 0; margin: 0;
+    font: 9px/9px var(--font);
+    color: var(--ascii);
+    text-shadow: 0 0 6px rgba(255, 43, 214, 0.55);
+    white-space: pre; pointer-events: none;
+  }
+  #radar { position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; }
+  .fx { position: fixed; inset: 0; pointer-events: none; }
+  .scan {
+    background: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0 2px, rgba(0,0,0,0.28) 2px 3px);
+    mix-blend-mode: multiply;
+  }
+  .vig { background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.85) 100%); }
+
+  .hud {
+    position: fixed; font-size: 12px; letter-spacing: 0.2em; opacity: 0.75;
+    text-shadow: 0 0 8px var(--radar);
+  }
+  #total { top: calc(env(safe-area-inset-top) + 14px); left: 16px; }
+  #lock  { top: calc(env(safe-area-inset-top) + 14px); right: 16px; }
+  #lock.armed { color: var(--hot); text-shadow: 0 0 8px var(--hot); opacity: 1; }
+
+  button {
+    font-family: var(--font); cursor: pointer;
+    background: rgba(2, 8, 7, 0.7); color: var(--radar);
+    border: 1px solid var(--radar);
+    box-shadow: 0 0 12px var(--radar-dim), inset 0 0 10px var(--radar-dim);
+  }
+  #add {
+    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 22px);
+    transform: translateX(-50%);
+    width: 54px; height: 54px; border-radius: 50%;
+    font-size: 28px; line-height: 1; display: none;
+  }
+  body.armed #add { display: block; }
+
+  #menu { position: fixed; display: none; gap: 14px; transform: translate(-50%, -50%); }
+  #menu.open { display: flex; }
+  #menu button { width: 46px; height: 46px; border-radius: 50%; font-size: 22px; }
+  #menu .del { border-color: var(--hot); color: var(--hot); box-shadow: 0 0 12px rgba(255,43,214,.3); }
+  #menu .del.sure { background: var(--hot); color: var(--bg); }
+
+  #entry {
+    position: fixed; inset: 0; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(2, 8, 7, 0.6); backdrop-filter: blur(2px);
+  }
+  #entry.open { display: flex; }
+  #entry input {
+    width: min(78vw, 320px); padding: 14px 16px;
+    font: 22px var(--font); text-transform: uppercase; letter-spacing: 0.15em; text-align: center;
+    color: var(--radar); background: rgba(2, 8, 7, 0.9);
+    border: 1px solid var(--radar); outline: none; border-radius: 0;
+    box-shadow: 0 0 22px var(--radar-dim);
+    caret-color: var(--hot);
+  }
+</style>
+</head>
+<body>
+<pre id="ascii"></pre>
+<canvas id="radar"></canvas>
+<div class="fx scan"></div>
+<div class="fx vig"></div>
+<div id="total" class="hud">♣ 0</div>
+<div id="lock" class="hud">◌</div>
+<button id="add" aria-label="aggiungi">+</button>
+<div id="menu">
+  <button class="minus" aria-label="meno uno">−</button>
+  <button class="del" aria-label="rimuovi">×</button>
+</div>
+<form id="entry"><input maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done"></form>
+
+<script>
+/* ───────── token ───────── */
+const params = new URLSearchParams(location.hash.slice(1) || location.search.slice(1));
+let token = params.get("k") || (() => { try { return localStorage.getItem("k"); } catch { return null; } })();
+
+async function api(path, opts = {}) {
+  const headers = { "content-type": "application/json" };
+  if (token) headers.authorization = "Bearer " + token;
+  const res = await fetch(path, { ...opts, headers });
+  if (!res.ok) throw res;
+  return res.json();
+}
+
+function setArmed(on) {
+  document.body.classList.toggle("armed", on);
+  const lock = document.getElementById("lock");
+  lock.classList.toggle("armed", on);
+  lock.textContent = on ? "◉" : "◌";
+}
+
+if (token) {
+  api("/api/auth", { method: "POST" }).then(() => {
+    try { localStorage.setItem("k", token); } catch {}
+    setArmed(true);
+  }).catch(() => {
+    try { localStorage.removeItem("k"); } catch {}
+    token = null;
+  });
+}
+
+/* ───────── ASCII ace of clubs (3D) ───────── */
+const asciiEl = document.getElementById("ascii");
+const RAMP = ".,-~:;=!*#$@";
+const PTS = [];
+const add = (x, y, z, nx, ny, nz, two = false) => {
+  const l = Math.hypot(nx, ny, nz) || 1;
+  PTS.push(x, y, z, nx / l, ny / l, nz / l, two ? 1 : 0);
+};
+
+// shaft: tapered, knobbly, slightly bent club
+const Y0 = -1.15, LEN = 2.0;
+const radius = t => 0.085 + 0.14 * Math.pow(t, 1.25) + 0.012 * Math.sin(t * 23);
+const bend = t => 0.07 * Math.sin(Math.PI * t);
+const axisAt = t => [bend(t), Y0 + LEN * t, 0];
+for (let t = 0; t <= 1; t += 0.011) {
+  const r = radius(t), dr = (radius(t + 0.01) - r) / (0.01 * LEN);
+  for (let a = 0; a < Math.PI * 2; a += 0.11) {
+    const c = Math.cos(a), s = Math.sin(a);
+    add(bend(t) + r * c, Y0 + LEN * t, r * s, c, -dr, s);
+  }
+}
+// rounded top
+{
+  const rt = radius(1), [cx, cy] = axisAt(1);
+  for (let p = 0; p <= Math.PI / 2; p += 0.08)
+    for (let a = 0; a < Math.PI * 2; a += 0.11) {
+      const nx = Math.sin(p) * Math.cos(a), ny = Math.cos(p), nz = Math.sin(p) * Math.sin(a);
+      add(cx + rt * nx, cy + rt * 0.7 * ny, rt * nz, nx, ny, nz);
+    }
+}
+// butt end
+for (let r = 0; r <= radius(0); r += 0.02)
+  for (let a = 0; a < Math.PI * 2; a += 0.15) add(r * Math.cos(a), Y0, r * Math.sin(a), 0, -1, 0);
+// knots (cut branch stubs)
+for (const [t, a, k] of [[0.16, 0.6, 0.045], [0.3, 2.9, 0.055], [0.45, 4.5, 0.06], [0.58, 1.4, 0.065], [0.72, 3.7, 0.07], [0.86, 5.6, 0.065]]) {
+  const r = radius(t), [ax, ay] = axisAt(t);
+  const ox = ax + (r + k * 0.35) * Math.cos(a), oz = (r + k * 0.35) * Math.sin(a);
+  for (let p = 0; p <= Math.PI; p += 0.2)
+    for (let b = 0; b < Math.PI * 2; b += 0.2) {
+      const nx = Math.sin(p) * Math.cos(b), ny = Math.cos(p), nz = Math.sin(p) * Math.sin(b);
+      add(ox + k * nx, ay + k * ny, oz + k * nz, nx, ny, nz);
+    }
+}
+// leaves
+for (const [t, a, dir, L, W] of [
+  [0.66, 0.3, [1, 0.9, 0.25], 0.42, 0.11],
+  [0.5, 3.3, [-1, 0.7, -0.3], 0.36, 0.1],
+  [0.93, 2.1, [-0.35, 1, 0.6], 0.32, 0.09],
+  [0.8, 5.0, [0.5, 0.8, -1], 0.3, 0.085],
+]) {
+  const r = radius(t), [ax, ay] = axisAt(t);
+  const bx = ax + r * Math.cos(a), by = ay, bz = r * Math.sin(a);
+  const dl = Math.hypot(...dir), d = dir.map(v => v / dl);
+  let side = [d[1] * 0 - d[2] * 1, d[2] * 0 - d[0] * 0, d[0] * 1 - d[1] * 0]; // d × up
+  if (Math.hypot(...side) < 0.2) side = [1, 0, 0];
+  const sl = Math.hypot(...side); side = side.map(v => v / sl);
+  const n = [d[1] * side[2] - d[2] * side[1], d[2] * side[0] - d[0] * side[2], d[0] * side[1] - d[1] * side[0]];
+  for (let u = 0; u <= 1; u += 0.025) {
+    const hw = W * Math.sin(Math.PI * Math.pow(u, 0.8)), curl = 0.08 * u * u;
+    for (let v = -1; v <= 1; v += 0.12) {
+      const q = u * L;
+      add(bx + d[0] * q + side[0] * hw * v + n[0] * curl,
+          by + d[1] * q + side[1] * hw * v + n[1] * curl,
+          bz + d[2] * q + side[2] * hw * v + n[2] * curl,
+          n[0], n[1], n[2], true);
+    }
+  }
+}
+
+const LIGHT = (() => { const v = [-0.35, 0.55, -0.75], l = Math.hypot(...v); return v.map(x => x / l); })();
+let cols = 0, rows = 0, zbuf, cbuf, CW = 9 * 0.6;
+const CH = 9;
+function sizeAscii() {
+  const probe = document.createElement("span");
+  probe.style.cssText = "position:absolute;visibility:hidden;white-space:pre;font:9px/9px var(--font)";
+  probe.textContent = "@".repeat(100);
+  document.body.appendChild(probe);
+  CW = probe.getBoundingClientRect().width / 100 || CW;
+  probe.remove();
+  cols = Math.ceil(innerWidth / CW);
+  rows = Math.ceil(innerHeight / CH);
+  zbuf = new Float32Array(cols * rows);
+  cbuf = new Uint8Array(cols * rows);
+}
+
+function renderAscii(A) {
+  zbuf.fill(0); cbuf.fill(0);
+  const W = innerWidth, H = innerHeight;
+  const S = R * 0.72, D = 4;
+  const ca = Math.cos(A), sa = Math.sin(A);
+  const tilt = -0.42, ct = Math.cos(tilt), st = Math.sin(tilt);
+  const lean = 0.18, cl = Math.cos(lean), sl = Math.sin(lean);
+  for (let i = 0; i < PTS.length; i += 7) {
+    // spin around own axis
+    let x = PTS[i] * ca + PTS[i + 2] * sa, y = PTS[i + 1] + 0.12, z = -PTS[i] * sa + PTS[i + 2] * ca;
+    let nx = PTS[i + 3] * ca + PTS[i + 5] * sa, ny = PTS[i + 4], nz = -PTS[i + 3] * sa + PTS[i + 5] * ca;
+    // tilt diagonally like the card
+    let x2 = x * ct - y * st, y2 = x * st + y * ct;
+    let nx2 = nx * ct - ny * st, ny2 = nx * st + ny * ct;
+    // lean toward viewer
+    const y3 = y2 * cl - z * sl, z3 = y2 * sl + z * cl;
+    const ny3 = ny2 * cl - nz * sl, nz3 = ny2 * sl + nz * cl;
+    const ooz = 1 / (z3 + D);
+    const col = Math.floor((W / 2 + x2 * S * D * ooz) / CW);
+    const row = Math.floor((H / 2 - y3 * S * D * ooz) / CH);
+    if (col < 0 || col >= cols || row < 0 || row >= rows) continue;
+    const k = row * cols + col;
+    if (ooz <= zbuf[k]) continue;
+    zbuf[k] = ooz;
+    let lum = nx2 * LIGHT[0] + ny3 * LIGHT[1] + nz3 * LIGHT[2];
+    if (PTS[i + 6]) lum = Math.abs(lum);
+    cbuf[k] = 1 + Math.max(0, Math.min(RAMP.length - 1, Math.floor(lum * RAMP.length)));
+  }
+  let out = "";
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) { const v = cbuf[r * cols + c]; out += v ? RAMP[v - 1] : " "; }
+    out += "\n";
+  }
+  asciiEl.textContent = out;
+}
+
+/* ───────── radar ───────── */
+const cv = document.getElementById("radar");
+const ctx = cv.getContext("2d");
+let W, H, CX, CY, R, dpr;
+function resize() {
+  dpr = Math.min(devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  CX = W / 2; CY = H / 2;
+  R = Math.min(W, H) * 0.43;
+  sizeAscii();
+}
+addEventListener("resize", resize);
+resize();
+document.fonts?.ready.then(resize);
+
+const GREEN = "25,255,176", HOT = "255,43,214";
+let players = [];
+const view = new Map(); // id -> {r, a, pings:[]}
+let sweep = -Math.PI / 2;
+const noise = Array.from({ length: 40 }, () => ({ a: Math.random() * 6.283, r: Math.random(), t: Math.random() * 6.283 }));
+
+function layout() {
+  const n = players.length, max = Math.max(0, ...players.map(p => p.hits));
+  players.forEach((p, i) => {
+    const norm = max ? p.hits / max : 0;
+    const target = { r: R * (0.9 - 0.62 * norm), a: -Math.PI / 2 + (i * Math.PI * 2) / Math.max(n, 1) };
+    let v = view.get(p.id);
+    if (!v) { v = { r: R, a: target.a, pings: [] }; view.set(p.id, v); }
+    v.tr = target.r; v.ta = target.a;
+    v.lead = max > 0 && p.hits === max;
+  });
+  for (const id of view.keys()) if (!players.some(p => p.id === id)) view.delete(id);
+  document.getElementById("total").textContent = "♣ " + players.reduce((s, p) => s + p.hits, 0);
+}
+
+function blipPos(v) { return [CX + Math.cos(v.a) * v.r, CY + Math.sin(v.a) * v.r]; }
+
+function drawRadar(t, dt) {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  // rings + crosshair
+  ctx.lineWidth = 1;
+  for (let i = 1; i <= 4; i++) {
+    ctx.strokeStyle = `rgba(${GREEN},${i === 4 ? 0.55 : 0.2})`;
+    ctx.beginPath(); ctx.arc(CX, CY, (R * i) / 4, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.strokeStyle = `rgba(${GREEN},0.14)`;
+  ctx.beginPath();
+  ctx.moveTo(CX - R, CY); ctx.lineTo(CX + R, CY);
+  ctx.moveTo(CX, CY - R); ctx.lineTo(CX, CY + R);
+  ctx.stroke();
+  // bezel ticks
+  for (let d = 0; d < 360; d += 5) {
+    const a = (d * Math.PI) / 180, long = d % 30 === 0;
+    ctx.strokeStyle = `rgba(${GREEN},${long ? 0.7 : 0.3})`;
+    ctx.beginPath();
+    ctx.moveTo(CX + Math.cos(a) * (R + 4), CY + Math.sin(a) * (R + 4));
+    ctx.lineTo(CX + Math.cos(a) * (R + (long ? 14 : 8)), CY + Math.sin(a) * (R + (long ? 14 : 8)));
+    ctx.stroke();
+  }
+
+  // sweep
+  sweep = (sweep + dt * 1.4) % (Math.PI * 2);
+  const trail = 1.1;
+  if (ctx.createConicGradient) {
+    const g = ctx.createConicGradient(sweep - trail, CX, CY);
+    const f = trail / (Math.PI * 2);
+    g.addColorStop(0, `rgba(${GREEN},0)`);
+    g.addColorStop(f, `rgba(${GREEN},0.32)`);
+    g.addColorStop(Math.min(f + 0.001, 1), `rgba(${GREEN},0)`);
+    g.addColorStop(1, `rgba(${GREEN},0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(CX, CY, R, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.strokeStyle = `rgba(${GREEN},0.95)`;
+  ctx.shadowColor = `rgb(${GREEN})`; ctx.shadowBlur = 12; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(CX, CY);
+  ctx.lineTo(CX + Math.cos(sweep) * R, CY + Math.sin(sweep) * R); ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // sea clutter
+  for (const n of noise) {
+    const since = (sweep - n.a + Math.PI * 4) % (Math.PI * 2);
+    const al = Math.max(0, 0.5 - since / 3);
+    if (al <= 0) continue;
+    ctx.fillStyle = `rgba(${GREEN},${al})`;
+    ctx.fillRect(CX + Math.cos(n.a) * n.r * R, CY + Math.sin(n.a) * n.r * R, 1.5, 1.5);
+  }
+
+  // blips
+  ctx.font = `13px "Share Tech Mono", monospace`;
+  ctx.textBaseline = "middle";
+  for (const p of players) {
+    const v = view.get(p.id);
+    if (!v) continue;
+    v.r += (v.tr - v.r) * Math.min(1, dt * 4);
+    let da = ((v.ta - v.a + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+    v.a += da * Math.min(1, dt * 4);
+    const [x, y] = blipPos(v);
+    const since = (sweep - v.a + Math.PI * 4) % (Math.PI * 2);
+    const glow = Math.max(0.35, 1 - since / 4.2);
+    const col = v.lead ? HOT : GREEN;
+    const size = 4 + Math.min(6, p.hits * 0.5);
+
+    if (v.lead) {
+      const pr = size + 6 + ((t / 90) % 18);
+      ctx.strokeStyle = `rgba(${HOT},${0.6 * (1 - ((t / 90) % 18) / 18)})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(x, y, pr, 0, Math.PI * 2); ctx.stroke();
+    }
+    v.pings = v.pings.filter(pg => t - pg < 900);
+    for (const pg of v.pings) {
+      const k = (t - pg) / 900;
+      ctx.strokeStyle = `rgba(${col},${1 - k})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x, y, size + k * 46, 0, Math.PI * 2); ctx.stroke();
+    }
+
+    ctx.shadowColor = `rgb(${col})`; ctx.shadowBlur = 14 * glow;
+    ctx.fillStyle = `rgba(${col},${glow})`;
+    ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    const right = x <= CX;
+    ctx.textAlign = right ? "left" : "right";
+    const lx = x + (right ? size + 8 : -size - 8);
+    ctx.fillStyle = `rgba(${col},${Math.max(0.6, glow)})`;
+    ctx.fillText(p.name.toUpperCase(), lx, y - 7);
+    ctx.fillStyle = `rgba(${col},${Math.max(0.45, glow * 0.9)})`;
+    ctx.font = `bold 15px "Share Tech Mono", monospace`;
+    ctx.fillText(String(p.hits).padStart(2, "0"), lx, y + 8);
+    ctx.font = `13px "Share Tech Mono", monospace`;
+  }
+
+  // centre pip
+  ctx.fillStyle = `rgba(${HOT},0.9)`;
+  ctx.beginPath(); ctx.arc(CX, CY, 2.5, 0, Math.PI * 2); ctx.fill();
+}
+
+/* ───────── loop ───────── */
+let last = performance.now(), spin = 0, asciiAcc = 0;
+function frame(t) {
+  const dt = Math.min(0.1, (t - last) / 1000); last = t;
+  spin += dt * 0.9;
+  asciiAcc += dt;
+  if (asciiAcc > 1 / 30) { asciiAcc = 0; renderAscii(spin); }
+  drawRadar(t, dt);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ───────── data ───────── */
+let busy = 0;
+async function load() {
+  if (busy) return;
+  try { players = await api("/api/players"); layout(); } catch {}
+}
+async function mutate(path, opts) {
+  busy++;
+  try { players = await api(path, opts); layout(); }
+  catch (e) { if (e.status === 401) { token = null; setArmed(false); } load(); }
+  finally { busy--; }
+}
+load();
+setInterval(() => { if (!document.hidden && !menuFor) load(); }, 4000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+
+/* ───────── interaction ───────── */
+const menu = document.getElementById("menu");
+const delBtn = menu.querySelector(".del");
+let menuFor = null, pressTimer = null, pressId = null, longFired = false;
+
+function pick(ex, ey) {
+  let best = null, bd = 34;
+  for (const p of players) {
+    const v = view.get(p.id); if (!v) continue;
+    const [x, y] = blipPos(v);
+    const d = Math.hypot(ex - x, ey - y);
+    if (d < bd) { bd = d; best = p; }
+  }
+  return best;
+}
+function closeMenu() { menu.classList.remove("open"); delBtn.classList.remove("sure"); menuFor = null; }
+function openMenu(p) {
+  menuFor = p.id;
+  const [x, y] = blipPos(view.get(p.id));
+  menu.style.left = Math.min(Math.max(x, 60), W - 60) + "px";
+  menu.style.top = Math.max(y - 56, 40) + "px";
+  delBtn.classList.remove("sure");
+  menu.classList.add("open");
+  navigator.vibrate?.([10, 40, 10]);
+}
+
+cv.addEventListener("pointerdown", e => {
+  if (!token) return;
+  if (menuFor) { closeMenu(); return; }
+  const p = pick(e.clientX, e.clientY);
+  if (!p) return;
+  pressId = p.id; longFired = false;
+  pressTimer = setTimeout(() => { longFired = true; openMenu(p); }, 480);
+});
+cv.addEventListener("pointerup", () => {
+  clearTimeout(pressTimer);
+  if (pressId == null || longFired) { pressId = null; return; }
+  const id = pressId; pressId = null;
+  const p = players.find(q => q.id === id); if (!p) return;
+  p.hits++; layout();
+  view.get(id)?.pings.push(performance.now());
+  navigator.vibrate?.(25);
+  mutate(`/api/players/${id}/hit`, { method: "POST" });
+});
+cv.addEventListener("pointercancel", () => { clearTimeout(pressTimer); pressId = null; });
+cv.addEventListener("contextmenu", e => e.preventDefault());
+
+menu.querySelector(".minus").addEventListener("click", () => {
+  const id = menuFor; closeMenu();
+  const p = players.find(q => q.id === id);
+  if (p && p.hits > 0) { p.hits--; layout(); }
+  mutate(`/api/players/${id}/unhit`, { method: "POST" });
+});
+delBtn.addEventListener("click", () => {
+  if (!delBtn.classList.contains("sure")) { delBtn.classList.add("sure"); navigator.vibrate?.(40); return; }
+  const id = menuFor; closeMenu();
+  players = players.filter(q => q.id !== id); layout();
+  mutate(`/api/players/${id}`, { method: "DELETE" });
+});
+
+const entry = document.getElementById("entry");
+const input = entry.querySelector("input");
+document.getElementById("add").addEventListener("click", () => {
+  closeMenu();
+  entry.classList.add("open"); input.value = ""; input.focus();
+});
+entry.addEventListener("submit", e => {
+  e.preventDefault();
+  const name = input.value.trim();
+  entry.classList.remove("open"); input.blur();
+  if (name) mutate("/api/players", { method: "POST", body: JSON.stringify({ name }) });
+});
+entry.addEventListener("pointerdown", e => { if (e.target === entry) { entry.classList.remove("open"); input.blur(); } });
+
+</script>
+</body>
+</html>
