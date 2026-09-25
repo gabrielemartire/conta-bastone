@@ -67,6 +67,28 @@
   }
   body.armed #add { display: block; }
 
+  #rank {
+    position: fixed; right: 10px; margin: 0; padding: 0; list-style: none;
+    font-size: 13px; letter-spacing: 0.12em;
+    overflow-y: auto; scrollbar-width: none;
+  }
+  #rank::-webkit-scrollbar { display: none; }
+  #rank li {
+    display: flex; justify-content: flex-end; gap: 10px;
+    padding: 5px 8px 5px 14px; opacity: 0.62; cursor: default;
+    border-right: 2px solid transparent;
+    text-shadow: 0 0 6px var(--radar);
+    transition: opacity .15s, background .15s;
+  }
+  #rank li span { max-width: 11ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #rank li b { min-width: 2ch; text-align: right; font-weight: normal; }
+  #rank li.lead { color: var(--hot); text-shadow: 0 0 6px var(--hot); }
+  #rank li.on {
+    opacity: 1; border-right-color: currentColor;
+    background: linear-gradient(to left, var(--radar-dim), transparent);
+  }
+  #rank li.lead.on { background: linear-gradient(to left, rgba(255,43,214,.2), transparent); }
+
   #menu { position: fixed; display: none; gap: 14px; transform: translate(-50%, -50%); }
   #menu.open { display: flex; }
   #menu button { width: 46px; height: 46px; border-radius: 50%; font-size: 22px; }
@@ -96,6 +118,7 @@
 <div class="fx vig"></div>
 <div id="total" class="hud">♣ 0</div>
 <div id="lock" class="hud">◌</div>
+<ol id="rank"></ol>
 <button id="add" aria-label="aggiungi">+</button>
 <div id="menu">
   <button class="minus" aria-label="meno uno">−</button>
@@ -236,8 +259,8 @@ function renderAscii(A) {
     const y3 = y2 * cl - z * sl, z3 = y2 * sl + z * cl;
     const ny3 = ny2 * cl - nz * sl, nz3 = ny2 * sl + nz * cl;
     const ooz = 1 / (z3 + D);
-    const col = Math.floor((W / 2 + x2 * S * D * ooz) / CW);
-    const row = Math.floor((H / 2 - y3 * S * D * ooz) / CH);
+    const col = Math.floor((CX + x2 * S * D * ooz) / CW);
+    const row = Math.floor((CY - y3 * S * D * ooz) / CH);
     if (col < 0 || col >= cols || row < 0 || row >= rows) continue;
     const k = row * cols + col;
     if (ooz <= zbuf[k]) continue;
@@ -254,16 +277,31 @@ function renderAscii(A) {
   asciiEl.textContent = out;
 }
 
-/* ───────── radar ───────── */
+/* ───────── blips ───────── */
 const cv = document.getElementById("radar");
+const rankEl = document.getElementById("rank");
 const ctx = cv.getContext("2d");
 let W, H, CX, CY, R, dpr;
 function resize() {
   dpr = Math.min(devicePixelRatio || 1, 2);
   W = innerWidth; H = innerHeight;
   cv.width = W * dpr; cv.height = H * dpr;
-  CX = W / 2; CY = H / 2;
-  R = Math.min(W, H) * 0.43;
+  const top = document.getElementById("lock").getBoundingClientRect().bottom + 16;
+  if (W > H) {
+    // landscape: radar left, rank on the right
+    R = H * 0.43;
+    CY = H / 2;
+    CX = Math.max(R + 24, Math.min(W / 2, W - 190 - R));
+    rankEl.style.top = top + "px";
+    rankEl.style.maxHeight = H - top - 24 + "px";
+  } else {
+    // portrait: radar low, rank in the gap above it
+    R = W * 0.43;
+    CX = W / 2;
+    CY = Math.max(H / 2, H - R - 110);
+    rankEl.style.top = top + "px";
+    rankEl.style.maxHeight = Math.max(90, CY - R - 22 - top) + "px";
+  }
   sizeAscii();
 }
 addEventListener("resize", resize);
@@ -274,7 +312,6 @@ const GREEN = "25,255,176", HOT = "255,43,214";
 let players = [];
 const view = new Map(); // id -> {r, a, pings:[]}
 let sweep = -Math.PI / 2;
-const noise = Array.from({ length: 40 }, () => ({ a: Math.random() * 6.283, r: Math.random(), t: Math.random() * 6.283 }));
 
 function layout() {
   const n = players.length, max = Math.max(0, ...players.map(p => p.hits));
@@ -287,8 +324,44 @@ function layout() {
     v.lead = max > 0 && p.hits === max;
   });
   for (const id of view.keys()) if (!players.some(p => p.id === id)) view.delete(id);
+  renderRank(max);
   document.getElementById("total").textContent = "♣ " + players.reduce((s, p) => s + p.hits, 0);
 }
+
+let hl = null, rankSig = "";
+function renderRank(max) {
+  const sorted = [...players].sort((a, b) => b.hits - a.hits || a.name.localeCompare(b.name));
+  const sig = sorted.map(p => p.id + ":" + p.hits + ":" + p.name).join("|");
+  if (sig !== rankSig) {
+    rankSig = sig;
+    rankEl.replaceChildren(...sorted.map(p => {
+      const li = document.createElement("li");
+      li.dataset.id = p.id;
+      const n = document.createElement("span"); n.textContent = p.name.toUpperCase();
+      const h = document.createElement("b"); h.textContent = String(p.hits).padStart(2, "0");
+      li.append(n, h);
+      if (max > 0 && p.hits === max) li.classList.add("lead");
+      return li;
+    }));
+  }
+  if (hl != null && !players.some(p => p.id === hl)) hl = null;
+  setHl(hl);
+}
+function setHl(id) {
+  hl = id;
+  for (const li of rankEl.children) li.classList.toggle("on", Number(li.dataset.id) === id);
+}
+rankEl.addEventListener("pointerover", e => {
+  if (e.pointerType !== "mouse") return;
+  const li = e.target.closest("li"); if (li) setHl(Number(li.dataset.id));
+});
+rankEl.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") setHl(null); });
+rankEl.addEventListener("click", e => {
+  const li = e.target.closest("li"); if (!li) return;
+  const id = Number(li.dataset.id);
+  setHl(hl === id && !matchMedia("(hover: hover)").matches ? null : id);
+  navigator.vibrate?.(8);
+});
 
 function blipPos(v) { return [CX + Math.cos(v.a) * v.r, CY + Math.sin(v.a) * v.r]; }
 
@@ -296,54 +369,8 @@ function drawRadar(t, dt) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
 
-  // rings + crosshair
-  ctx.lineWidth = 1;
-  for (let i = 1; i <= 4; i++) {
-    ctx.strokeStyle = `rgba(${GREEN},${i === 4 ? 0.55 : 0.2})`;
-    ctx.beginPath(); ctx.arc(CX, CY, (R * i) / 4, 0, Math.PI * 2); ctx.stroke();
-  }
-  ctx.strokeStyle = `rgba(${GREEN},0.14)`;
-  ctx.beginPath();
-  ctx.moveTo(CX - R, CY); ctx.lineTo(CX + R, CY);
-  ctx.moveTo(CX, CY - R); ctx.lineTo(CX, CY + R);
-  ctx.stroke();
-  // bezel ticks
-  for (let d = 0; d < 360; d += 5) {
-    const a = (d * Math.PI) / 180, long = d % 30 === 0;
-    ctx.strokeStyle = `rgba(${GREEN},${long ? 0.7 : 0.3})`;
-    ctx.beginPath();
-    ctx.moveTo(CX + Math.cos(a) * (R + 4), CY + Math.sin(a) * (R + 4));
-    ctx.lineTo(CX + Math.cos(a) * (R + (long ? 14 : 8)), CY + Math.sin(a) * (R + (long ? 14 : 8)));
-    ctx.stroke();
-  }
-
-  // sweep
+  // invisible sweep: blips flare as it passes, no radar drawn
   sweep = (sweep + dt * 1.4) % (Math.PI * 2);
-  const trail = 1.1;
-  if (ctx.createConicGradient) {
-    const g = ctx.createConicGradient(sweep - trail, CX, CY);
-    const f = trail / (Math.PI * 2);
-    g.addColorStop(0, `rgba(${GREEN},0)`);
-    g.addColorStop(f, `rgba(${GREEN},0.32)`);
-    g.addColorStop(Math.min(f + 0.001, 1), `rgba(${GREEN},0)`);
-    g.addColorStop(1, `rgba(${GREEN},0)`);
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(CX, CY, R, 0, Math.PI * 2); ctx.fill();
-  }
-  ctx.strokeStyle = `rgba(${GREEN},0.95)`;
-  ctx.shadowColor = `rgb(${GREEN})`; ctx.shadowBlur = 12; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(CX, CY);
-  ctx.lineTo(CX + Math.cos(sweep) * R, CY + Math.sin(sweep) * R); ctx.stroke();
-  ctx.shadowBlur = 0;
-
-  // sea clutter
-  for (const n of noise) {
-    const since = (sweep - n.a + Math.PI * 4) % (Math.PI * 2);
-    const al = Math.max(0, 0.5 - since / 3);
-    if (al <= 0) continue;
-    ctx.fillStyle = `rgba(${GREEN},${al})`;
-    ctx.fillRect(CX + Math.cos(n.a) * n.r * R, CY + Math.sin(n.a) * n.r * R, 1.5, 1.5);
-  }
 
   // blips
   ctx.font = `13px "Share Tech Mono", monospace`;
@@ -373,6 +400,12 @@ function drawRadar(t, dt) {
       ctx.beginPath(); ctx.arc(x, y, size + k * 46, 0, Math.PI * 2); ctx.stroke();
     }
 
+    if (since < 0.9) {
+      const k = since / 0.9;
+      ctx.strokeStyle = `rgba(${col},${0.5 * (1 - k)})`; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(x, y, size + 4 + k * 22, 0, Math.PI * 2); ctx.stroke();
+    }
+
     ctx.shadowColor = `rgb(${col})`; ctx.shadowBlur = 14 * glow;
     ctx.fillStyle = `rgba(${col},${glow})`;
     ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI * 2); ctx.fill();
@@ -381,17 +414,46 @@ function drawRadar(t, dt) {
     const right = x <= CX;
     ctx.textAlign = right ? "left" : "right";
     const lx = x + (right ? size + 8 : -size - 8);
-    ctx.fillStyle = `rgba(${col},${Math.max(0.6, glow)})`;
+    const on = hl === p.id;
+    ctx.fillStyle = on ? "#fff" : `rgba(${col},${Math.max(0.6, glow)})`;
+    if (on) { ctx.shadowColor = `rgb(${col})`; ctx.shadowBlur = 10; }
     ctx.fillText(p.name.toUpperCase(), lx, y - 7);
+    ctx.shadowBlur = 0;
     ctx.fillStyle = `rgba(${col},${Math.max(0.45, glow * 0.9)})`;
     ctx.font = `bold 15px "Share Tech Mono", monospace`;
     ctx.fillText(String(p.hits).padStart(2, "0"), lx, y + 8);
     ctx.font = `13px "Share Tech Mono", monospace`;
   }
 
-  // centre pip
-  ctx.fillStyle = `rgba(${HOT},0.9)`;
-  ctx.beginPath(); ctx.arc(CX, CY, 2.5, 0, Math.PI * 2); ctx.fill();
+  // lock-on for highlighted target
+  const hv = hl != null && view.get(hl);
+  if (hv) {
+    const [x, y] = blipPos(hv);
+    const col = hv.lead ? HOT : GREEN;
+    ctx.strokeStyle = `rgba(${col},0.9)`;
+    ctx.shadowColor = `rgb(${col})`; ctx.shadowBlur = 10;
+    ctx.lineWidth = 1.5;
+    // rotating brackets
+    const s = 16 + 3 * Math.sin(t / 180), rot = t / 900;
+    for (let k = 0; k < 4; k++) {
+      const a = rot + k * Math.PI / 2;
+      ctx.beginPath(); ctx.arc(x, y, s, a, a + 0.7); ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+    ctx.setLineDash([3, 5]);
+    // tether to rank row
+    const li = rankEl.querySelector(`li[data-id="${hl}"]`);
+    if (li) {
+      const r = li.getBoundingClientRect();
+      const lr = rankEl.getBoundingClientRect();
+      if (r.bottom > lr.top && r.top < lr.bottom) {
+        const tx = r.left, ty = r.top + r.height / 2;
+        ctx.strokeStyle = `rgba(${col},0.3)`;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(tx, ty); ctx.stroke();
+      }
+    }
+    ctx.setLineDash([]);
+  }
 }
 
 /* ───────── loop ───────── */
@@ -449,6 +511,7 @@ function openMenu(p) {
 }
 
 cv.addEventListener("pointerdown", e => {
+  if (hl != null && e.pointerType !== "mouse") setHl(null);
   if (!token) return;
   if (menuFor) { closeMenu(); return; }
   const p = pick(e.clientX, e.clientY);
