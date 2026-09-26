@@ -160,7 +160,9 @@ async function api(path, opts = {}) {
   return res.json();
 }
 
+let armed = false; // true only once the server has accepted the token
 function setArmed(on) {
+  armed = on;
   document.body.classList.toggle("armed", on);
   const lock = document.getElementById("lock");
   lock.classList.toggle("armed", on);
@@ -389,12 +391,12 @@ rankEl.addEventListener("click", e => {
   const li = e.target.closest("li"); if (!li) return;
   const id = Number(li.dataset.id);
   if (e.target.closest(".minus")) {
-    if (token) { unhit(id); navigator.vibrate?.(15); }
+    if (armed) { unhit(id); navigator.vibrate?.(15); }
     return;
   }
   const del = e.target.closest(".trash");
   if (del) {
-    if (!token) return;
+    if (!armed) return;
     if (!del.classList.contains("sure")) {
       rankEl.querySelector(".trash.sure")?.classList.remove("sure");
       del.classList.add("sure"); navigator.vibrate?.(40); return;
@@ -518,6 +520,7 @@ async function load() {
   try { players = await api("/api/players"); layout(); } catch {}
 }
 async function mutate(path, opts) {
+  if (!armed) { load(); return; }
   busy++;
   try { players = await api(path, opts); layout(); }
   catch (e) { if (e.status === 401) { token = null; setArmed(false); } load(); }
@@ -555,7 +558,7 @@ function openMenu(p) {
 
 cv.addEventListener("pointerdown", e => {
   if (hl != null && e.pointerType !== "mouse") setHl(null);
-  if (!token) return;
+  if (!armed) return;
   if (menuFor) { closeMenu(); return; }
   const p = pick(e.clientX, e.clientY);
   if (!p) return;
@@ -576,6 +579,7 @@ cv.addEventListener("pointercancel", () => { clearTimeout(pressTimer); pressId =
 cv.addEventListener("contextmenu", e => e.preventDefault());
 
 function unhit(id) {
+  if (!armed) return;
   const p = players.find(q => q.id === id);
   if (p && p.hits > 0) { p.hits--; layout(); }
   mutate(`/api/players/${id}/unhit`, { method: "POST" });
@@ -585,6 +589,7 @@ menu.querySelector(".minus").addEventListener("click", () => {
   unhit(id);
 });
 function removePlayer(id) {
+  if (!armed) return;
   if (menuFor === id) closeMenu();
   players = players.filter(q => q.id !== id); layout();
   mutate(`/api/players/${id}`, { method: "DELETE" });
