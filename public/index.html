@@ -55,6 +55,7 @@
     color: inherit; text-decoration: none; transition: opacity .15s;
   }
   #lock:hover { opacity: 1; }
+  #lock svg { display: block; width: 22px; height: 22px; filter: drop-shadow(0 0 5px currentColor); }
   #lock.armed { color: var(--hot); text-shadow: 0 0 8px var(--hot); opacity: 1; }
 
   button {
@@ -78,7 +79,7 @@
   }
   #rank::-webkit-scrollbar { display: none; }
   #rank li {
-    display: flex; justify-content: flex-end; gap: 10px;
+    display: flex; justify-content: flex-end; align-items: center; gap: 10px;
     padding: 5px 8px 5px 14px; opacity: 0.62; cursor: default;
     border-right: 2px solid transparent;
     text-shadow: 0 0 6px var(--radar);
@@ -92,15 +93,20 @@
     background: linear-gradient(to left, var(--radar-dim), transparent);
   }
   #rank li.lead.on { background: linear-gradient(to left, rgba(255,43,214,.2), transparent); }
-  #rank .trash {
-    display: none; align-items: center; gap: 6px; padding: 0 2px;
-    background: none; border: 0; box-shadow: none; color: var(--hot);
-    font: inherit; letter-spacing: inherit; text-shadow: 0 0 6px var(--hot);
+  #rank .act {
+    display: none; align-items: center; justify-content: center; gap: 6px;
+    min-width: 30px; height: 30px; margin: -6px 0; padding: 0 4px;
+    background: none; border: 0; box-shadow: none; color: inherit;
+    font: inherit; letter-spacing: inherit;
   }
-  #rank .trash svg { width: 13px; height: 13px; filter: drop-shadow(0 0 3px var(--hot)); }
+  #rank .act svg { width: 20px; height: 20px; filter: drop-shadow(0 0 3px currentColor); }
+  #rank .act + .act { margin-left: -6px; }
+  #rank .trash { color: var(--hot); text-shadow: 0 0 6px var(--hot); }
   #rank .trash i { display: none; font-style: normal; }
-  body.armed #rank li.on .trash { display: inline-flex; }
-  #rank .trash.sure { background: var(--hot); color: var(--bg); text-shadow: none; padding: 0 6px; }
+  body.armed #rank li.on .act { display: inline-flex; }
+  @media (hover: none) { body.armed #rank .act { display: inline-flex; } }
+  #rank .minus:disabled { opacity: 0.25; cursor: default; }
+  #rank .trash.sure { background: var(--hot); color: var(--bg); text-shadow: none; padding: 0 8px; }
   #rank .trash.sure svg { display: none; }
   #rank .trash.sure i { display: inline; }
 
@@ -132,7 +138,7 @@
 <div class="fx scan"></div>
 <div class="fx vig"></div>
 <div id="total" class="hud">♣ 0</div>
-<a id="lock" class="hud" href="https://github.com/gabrielemartire" target="_blank" rel="noopener" title="github.com/gabrielemartire">◌</a>
+<a id="lock" class="hud" href="https://github.com/gabrielemartire" target="_blank" rel="noopener" title="github.com/gabrielemartire" aria-label="GitHub"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
 <ol id="rank"></ol>
 <button id="add" aria-label="aggiungi">+</button>
 <div id="menu">
@@ -158,7 +164,6 @@ function setArmed(on) {
   document.body.classList.toggle("armed", on);
   const lock = document.getElementById("lock");
   lock.classList.toggle("armed", on);
-  lock.textContent = on ? "◉" : "◌";
 }
 
 if (token) {
@@ -344,6 +349,7 @@ function layout() {
 }
 
 let hl = null, rankSig = "";
+const MINUS = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="8" cy="8" r="6.2"/><path d="M5 8h6"/></svg>';
 const TRASH = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.8 6.5v5M9.2 6.5v5"/></svg>';
 function renderRank(max) {
   const sorted = [...players].sort((a, b) => b.hits - a.hits || a.name.localeCompare(b.name));
@@ -356,9 +362,12 @@ function renderRank(max) {
       const n = document.createElement("span"); n.textContent = p.name.toUpperCase();
       const h = document.createElement("b"); h.textContent = String(p.hits).padStart(2, "0");
       const del = document.createElement("button");
-      del.className = "trash"; del.type = "button"; del.setAttribute("aria-label", "elimina " + p.name);
+      del.className = "act trash"; del.type = "button"; del.setAttribute("aria-label", "elimina " + p.name);
       del.innerHTML = TRASH + "<i>ELIMINA?</i>";
-      li.append(del, n, h);
+      const minus = document.createElement("button");
+      minus.className = "act minus"; minus.type = "button"; minus.setAttribute("aria-label", "togli un bastone a " + p.name);
+      minus.innerHTML = MINUS; minus.disabled = p.hits === 0;
+      li.append(del, minus, n, h);
       if (max > 0 && p.hits === max) li.classList.add("lead");
       return li;
     }));
@@ -379,10 +388,17 @@ rankEl.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") se
 rankEl.addEventListener("click", e => {
   const li = e.target.closest("li"); if (!li) return;
   const id = Number(li.dataset.id);
+  if (e.target.closest(".minus")) {
+    if (token) { unhit(id); navigator.vibrate?.(15); }
+    return;
+  }
   const del = e.target.closest(".trash");
   if (del) {
     if (!token) return;
-    if (!del.classList.contains("sure")) { del.classList.add("sure"); navigator.vibrate?.(40); return; }
+    if (!del.classList.contains("sure")) {
+      rankEl.querySelector(".trash.sure")?.classList.remove("sure");
+      del.classList.add("sure"); navigator.vibrate?.(40); return;
+    }
     removePlayer(id);
     return;
   }
@@ -559,11 +575,14 @@ cv.addEventListener("pointerup", () => {
 cv.addEventListener("pointercancel", () => { clearTimeout(pressTimer); pressId = null; });
 cv.addEventListener("contextmenu", e => e.preventDefault());
 
-menu.querySelector(".minus").addEventListener("click", () => {
-  const id = menuFor; closeMenu();
+function unhit(id) {
   const p = players.find(q => q.id === id);
   if (p && p.hits > 0) { p.hits--; layout(); }
   mutate(`/api/players/${id}/unhit`, { method: "POST" });
+}
+menu.querySelector(".minus").addEventListener("click", () => {
+  const id = menuFor; closeMenu();
+  unhit(id);
 });
 function removePlayer(id) {
   if (menuFor === id) closeMenu();
