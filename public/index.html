@@ -264,7 +264,7 @@ function sizeAscii() {
 function renderAscii(A) {
   zbuf.fill(0); cbuf.fill(0);
   const W = innerWidth, H = innerHeight;
-  const S = R * 0.72, D = 4;
+  const S = R * (W > H ? 0.72 : 0.9), D = 4; // bigger on phones (portrait)
   const ca = Math.cos(A), sa = Math.sin(A);
   const tilt = -0.42, ct = Math.cos(tilt), st = Math.sin(tilt);
   const lean = 0.18, cl = Math.cos(lean), sl = Math.sin(lean);
