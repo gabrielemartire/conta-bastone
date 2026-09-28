@@ -3,7 +3,7 @@
   "main": "src/worker.js",
   "compatibility_date": "2026-04-01",
   "account_id": "b3bb0a8c0f588ce17eeb7ebf5c940d0e",
-  "assets": { "directory": "./public" },
+  "assets": { "directory": "./public", "binding": "ASSETS" },
   "d1_databases": [
     {
       "binding": "DB",

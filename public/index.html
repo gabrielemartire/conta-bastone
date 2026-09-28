@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Conta Bastone</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='rgb(2,8,7)'/><text x='50' y='52' text-anchor='middle' dominant-baseline='central' font-family='ui-monospace,Menlo,monospace' font-weight='700' font-size='50' letter-spacing='-4' fill='rgb(25,255,176)'>%2B11</text></svg>">
+<link id="favicon" rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='rgb(2,8,7)'/><text x='50' y='52' text-anchor='middle' dominant-baseline='central' font-family='ui-monospace,Menlo,monospace' font-weight='700' font-size='50' letter-spacing='-4' fill='rgb(25,255,176)'>%2B11</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -16,10 +16,12 @@
     --bg: #020807;
     --radar: #19ffb0;
     --radar-dim: rgba(25, 255, 176, 0.18);
-    --hot: #ff2bd6;
-    --ascii: rgba(255, 43, 214, 0.34);
+    --hot-rgb: 255, 43, 214;
+    --hot: rgb(var(--hot-rgb));
+    --ascii: rgba(var(--hot-rgb), 0.34);
     --font: "Share Tech Mono", ui-monospace, Menlo, monospace;
   }
+  body.coat { --hot-rgb: 42, 246, 255; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin: 0; height: 100%; overflow: hidden;
@@ -30,11 +32,13 @@
     user-select: none; -webkit-user-select: none;
     overscroll-behavior: none;
   }
+  #ascii.flip { animation: flip .4s ease-out; }
+  @keyframes flip { from { opacity: 0; transform: scaleY(0.04); filter: brightness(3); } }
   #ascii {
     position: fixed; left: 0; top: 0; margin: 0;
     font: 9px/9px var(--font);
     color: var(--ascii);
-    text-shadow: 0 0 6px rgba(255, 43, 214, 0.55);
+    text-shadow: 0 0 6px rgba(var(--hot-rgb), 0.55);
     white-space: pre; pointer-events: none;
   }
   #radar { position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; }
@@ -54,6 +58,15 @@
     color: inherit; text-decoration: none; transition: opacity .15s;
   }
   #lock:hover { opacity: 1; }
+  #title { top: calc(env(safe-area-inset-top) + 10px); left: 14px; opacity: 1; z-index: 1; }
+  #title h1 { margin: 0; font-size: 16px; font-weight: normal; letter-spacing: 0.28em; }
+  #title h1 b { font-weight: normal; color: var(--hot); text-shadow: 0 0 10px var(--hot); }
+  #switch {
+    display: inline-block; margin-top: 4px; padding: 6px 8px 6px 0;
+    font-size: 11px; letter-spacing: 0.22em; color: inherit; text-decoration: none; opacity: 0.55;
+    transition: opacity .15s;
+  }
+  #switch:hover, #switch:focus-visible { opacity: 1; }
   #lock svg { display: block; width: 22px; height: 22px; filter: drop-shadow(0 0 5px currentColor); }
   #lock.armed { color: var(--hot); text-shadow: 0 0 8px var(--hot); opacity: 1; }
 
@@ -91,7 +104,7 @@
     opacity: 1; border-right-color: currentColor;
     background: linear-gradient(to left, var(--radar-dim), transparent);
   }
-  #rank li.lead.on { background: linear-gradient(to left, rgba(255,43,214,.2), transparent); }
+  #rank li.lead.on { background: linear-gradient(to left, rgba(var(--hot-rgb),.2), transparent); }
   #rank .act {
     display: none; align-items: center; justify-content: center; gap: 6px;
     min-width: 30px; height: 30px; margin: -6px 0; padding: 0 4px;
@@ -112,7 +125,7 @@
   #menu { position: fixed; display: none; gap: 14px; transform: translate(-50%, -50%); }
   #menu.open { display: flex; }
   #menu button { width: 46px; height: 46px; border-radius: 50%; font-size: 22px; }
-  #menu .del { border-color: var(--hot); color: var(--hot); box-shadow: 0 0 12px rgba(255,43,214,.3); }
+  #menu .del { border-color: var(--hot); color: var(--hot); box-shadow: 0 0 12px rgba(var(--hot-rgb),.3); }
   #menu .del.sure { background: var(--hot); color: var(--bg); }
 
   #entry {
@@ -137,6 +150,7 @@
 <div class="fx scan"></div>
 <div class="fx vig"></div>
 <a id="lock" class="hud" href="https://github.com/gabrielemartire" target="_blank" rel="noopener" title="github.com/gabrielemartire" aria-label="GitHub"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+<nav id="title" class="hud"><h1>CONTA <b id="word">BASTONE</b></h1><a id="switch" href="/cappotti">⇄ CAPPOTTI</a></nav>
 <ol id="rank"></ol>
 <button id="add" aria-label="aggiungi">+</button>
 <div id="menu">
@@ -175,6 +189,15 @@ if (token) {
     token = null;
   });
 }
+
+/* ───────── modes ───────── */
+const icon = (txt, rgb, size) => "data:image/svg+xml," + encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='rgb(2,8,7)'/><text x='50' y='52' text-anchor='middle' dominant-baseline='central' font-family='ui-monospace,Menlo,monospace' font-weight='700' font-size='${size}' letter-spacing='-4' fill='rgb(${rgb})'>${txt}</text></svg>`);
+const MODES = {
+  bastone:  { path: "/",         key: "hits",  act: "hit",  word: "BASTONE",  one: "un bastone",  hot: "255,43,214", icon: icon("+11", "25,255,176", 50) },
+  cappotti: { path: "/cappotti", key: "coats", act: "coat", word: "CAPPOTTI", one: "un cappotto", hot: "42,246,255", icon: icon("C", "42,246,255", 64) },
+};
+let M = MODES.bastone;
+const val = p => p[M.key];
 
 /* ───────── ASCII ace of clubs (3D) ───────── */
 const asciiEl = document.getElementById("ascii");
@@ -259,6 +282,60 @@ function sizeAscii() {
   rows = Math.ceil(innerHeight / CH);
   zbuf = new Float32Array(cols * rows);
   cbuf = new Uint8Array(cols * rows);
+  sqGrid = null;
+}
+
+/* ───────── ASCII giga chad squidward ───────── */
+let SQ = null, sqGrid = null;
+fetch("/squidward.txt").then(r => r.text()).then(t => {
+  const [head, data] = t.split("\n");
+  const [w, h] = head.split(" ").map(Number);
+  const ink = new Uint8Array(w * h);
+  for (let i = 0; i < ink.length; i++) ink[i] = parseInt(data[i], 16);
+  SQ = { w, h, ink }; sqGrid = null;
+}).catch(() => {});
+
+// resample the ink map onto the current character grid, centred on the radar
+function buildSquid() {
+  sqGrid = new Float32Array(cols * rows);
+  const hPx = Math.min(R * (innerWidth > innerHeight ? 2.05 : 2.35), innerHeight * 0.96);
+  const wPx = hPx * SQ.w / SQ.h;
+  const nc = Math.max(1, Math.round(wPx / CW)), nr = Math.max(1, Math.round(hPx / CH));
+  const c0 = Math.round((CX - wPx / 2) / CW), r0 = Math.round((CY - hPx / 2) / CH);
+  for (let r = 0; r < nr; r++) {
+    const row = r0 + r; if (row < 0 || row >= rows) continue;
+    const y0 = Math.floor(r / nr * SQ.h), y1 = Math.max(y0 + 1, Math.floor((r + 1) / nr * SQ.h));
+    for (let c = 0; c < nc; c++) {
+      const col = c0 + c; if (col < 0 || col >= cols) continue;
+      const x0 = Math.floor(c / nc * SQ.w), x1 = Math.max(x0 + 1, Math.floor((c + 1) / nc * SQ.w));
+      let sum = 0, max = 0, n = 0;
+      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+        const v = SQ.ink[y * SQ.w + x]; sum += v; n++; if (v > max) max = v;
+      }
+      sqGrid[row * cols + col] = (0.55 * max + 0.45 * sum / n) / 15; // keep outlines crisp
+    }
+  }
+}
+
+function renderSquid(t) {
+  if (!SQ) { asciiEl.textContent = ""; return; }
+  if (!sqGrid) buildSquid();
+  const span = innerWidth + innerHeight;
+  const band = ((t * 0.00035) % 1.6 - 0.3) * span; // diagonal shine, chad glow
+  const glitch = Math.random() < 0.04 ? Math.floor(Math.random() * rows) : -1;
+  let out = "";
+  for (let r = 0; r < rows; r++) {
+    const shift = r === glitch || r === glitch + 1 ? 2 : 0;
+    for (let c = 0; c < cols; c++) {
+      const v = sqGrid[r * cols + c - shift];
+      if (!v) { out += " "; continue; }
+      const d = (c * CW + r * CH * 0.7 - band) / 38;
+      const lum = v + 0.45 * Math.exp(-d * d);
+      out += RAMP[Math.min(RAMP.length - 1, Math.floor(lum * RAMP.length))];
+    }
+    out += "\n";
+  }
+  asciiEl.textContent = out;
 }
 
 function renderAscii(A) {
@@ -306,7 +383,8 @@ function resize() {
   dpr = Math.min(devicePixelRatio || 1, 2);
   W = innerWidth; H = innerHeight;
   cv.width = W * dpr; cv.height = H * dpr;
-  const top = document.getElementById("lock").getBoundingClientRect().bottom + 16;
+  const top = Math.max(document.getElementById("lock").getBoundingClientRect().bottom,
+    document.getElementById("title").getBoundingClientRect().bottom) + 12;
   if (W > H) {
     // landscape: radar left, rank on the right
     R = H * 0.43;
@@ -328,20 +406,21 @@ addEventListener("resize", resize);
 resize();
 document.fonts?.ready.then(resize);
 
-const GREEN = "25,255,176", HOT = "255,43,214";
+const GREEN = "25,255,176";
+let HOT = MODES.bastone.hot;
 let players = [];
 const view = new Map(); // id -> {r, a, pings:[]}
 let sweep = -Math.PI / 2;
 
 function layout() {
-  const n = players.length, max = Math.max(0, ...players.map(p => p.hits));
+  const n = players.length, max = Math.max(0, ...players.map(val));
   players.forEach((p, i) => {
-    const norm = max ? p.hits / max : 0;
+    const norm = max ? val(p) / max : 0;
     const target = { r: R * (0.9 - 0.62 * norm), a: -Math.PI / 2 + (i * Math.PI * 2) / Math.max(n, 1) };
     let v = view.get(p.id);
     if (!v) { v = { r: R, a: target.a, pings: [] }; view.set(p.id, v); }
     v.tr = target.r; v.ta = target.a;
-    v.lead = max > 0 && p.hits === max;
+    v.lead = max > 0 && val(p) === max;
   });
   for (const id of view.keys()) if (!players.some(p => p.id === id)) view.delete(id);
   renderRank(max);
@@ -351,23 +430,23 @@ let hl = null, rankSig = "";
 const MINUS = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="8" cy="8" r="6.2"/><path d="M5 8h6"/></svg>';
 const TRASH = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.8 6.5v5M9.2 6.5v5"/></svg>';
 function renderRank(max) {
-  const sorted = [...players].sort((a, b) => b.hits - a.hits || a.name.localeCompare(b.name));
-  const sig = sorted.map(p => p.id + ":" + p.hits + ":" + p.name).join("|");
+  const sorted = [...players].sort((a, b) => val(b) - val(a) || a.name.localeCompare(b.name));
+  const sig = sorted.map(p => p.id + ":" + val(p) + ":" + p.name).join("|");
   if (sig !== rankSig) {
     rankSig = sig;
     rankEl.replaceChildren(...sorted.map(p => {
       const li = document.createElement("li");
       li.dataset.id = p.id;
       const n = document.createElement("span"); n.textContent = p.name.toUpperCase();
-      const h = document.createElement("b"); h.textContent = String(p.hits).padStart(2, "0");
+      const h = document.createElement("b"); h.textContent = String(val(p)).padStart(2, "0");
       const del = document.createElement("button");
       del.className = "act trash"; del.type = "button"; del.setAttribute("aria-label", "elimina " + p.name);
       del.innerHTML = TRASH + "<i>ELIMINA?</i>";
       const minus = document.createElement("button");
-      minus.className = "act minus"; minus.type = "button"; minus.setAttribute("aria-label", "togli un bastone a " + p.name);
-      minus.innerHTML = MINUS; minus.disabled = p.hits === 0;
+      minus.className = "act minus"; minus.type = "button"; minus.setAttribute("aria-label", "togli " + M.one + " a " + p.name);
+      minus.innerHTML = MINUS; minus.disabled = val(p) === 0;
       li.append(del, minus, n, h);
-      if (max > 0 && p.hits === max) li.classList.add("lead");
+      if (max > 0 && val(p) === max) li.classList.add("lead");
       return li;
     }));
   }
@@ -427,7 +506,7 @@ function drawRadar(t, dt) {
     const since = (sweep - v.a + Math.PI * 4) % (Math.PI * 2);
     const glow = Math.max(0.35, 1 - since / 4.2);
     const col = v.lead ? HOT : GREEN;
-    const size = 4 + Math.min(6, p.hits * 0.5);
+    const size = 4 + Math.min(6, val(p) * 0.5);
 
     if (v.lead) {
       const pr = size + 6 + ((t / 90) % 18);
@@ -463,7 +542,7 @@ function drawRadar(t, dt) {
     ctx.shadowBlur = 0;
     ctx.fillStyle = `rgba(${col},${Math.max(0.45, glow * 0.9)})`;
     ctx.font = `bold 15px "Share Tech Mono", monospace`;
-    ctx.fillText(String(p.hits).padStart(2, "0"), lx, y + 8);
+    ctx.fillText(String(val(p)).padStart(2, "0"), lx, y + 8);
     ctx.font = `13px "Share Tech Mono", monospace`;
   }
 
@@ -504,7 +583,7 @@ function frame(t) {
   const dt = Math.min(0.1, (t - last) / 1000); last = t;
   spin += dt * 0.9;
   asciiAcc += dt;
-  if (asciiAcc > 1 / 30) { asciiAcc = 0; renderAscii(spin); }
+  if (asciiAcc > 1 / 30) { asciiAcc = 0; M.key === "coats" ? renderSquid(t) : renderAscii(spin); }
   drawRadar(t, dt);
   requestAnimationFrame(frame);
 }
@@ -567,10 +646,10 @@ cv.addEventListener("pointerup", () => {
   if (pressId == null || longFired) { pressId = null; return; }
   const id = pressId; pressId = null;
   const p = players.find(q => q.id === id); if (!p) return;
-  p.hits++; layout();
+  p[M.key]++; layout();
   view.get(id)?.pings.push(performance.now());
   navigator.vibrate?.(25);
-  mutate(`/api/players/${id}/hit`, { method: "POST" });
+  mutate(`/api/players/${id}/${M.act}`, { method: "POST" });
 });
 cv.addEventListener("pointercancel", () => { clearTimeout(pressTimer); pressId = null; });
 cv.addEventListener("contextmenu", e => e.preventDefault());
@@ -578,8 +657,8 @@ cv.addEventListener("contextmenu", e => e.preventDefault());
 function unhit(id) {
   if (!armed) return;
   const p = players.find(q => q.id === id);
-  if (p && p.hits > 0) { p.hits--; layout(); }
-  mutate(`/api/players/${id}/unhit`, { method: "POST" });
+  if (p && val(p) > 0) { p[M.key]--; layout(); }
+  mutate(`/api/players/${id}/un${M.act}`, { method: "POST" });
 }
 menu.querySelector(".minus").addEventListener("click", () => {
   const id = menuFor; closeMenu();
@@ -610,6 +689,31 @@ entry.addEventListener("submit", e => {
   if (name) mutate("/api/players", { method: "POST", body: JSON.stringify({ name }) });
 });
 entry.addEventListener("pointerdown", e => { if (e.target === entry) { entry.classList.remove("open"); input.blur(); } });
+
+/* ───────── page switch ───────── */
+const switchEl = document.getElementById("switch");
+function setMode(name, push) {
+  const next = MODES[name], other = name === "cappotti" ? "bastone" : "cappotti";
+  const changed = next !== M;
+  M = next; HOT = M.hot;
+  document.body.classList.toggle("coat", name === "cappotti");
+  document.getElementById("word").textContent = M.word;
+  document.title = "Conta " + M.word[0] + M.word.slice(1).toLowerCase();
+  document.getElementById("favicon").href = M.icon;
+  switchEl.href = MODES[other].path;
+  switchEl.textContent = "⇄ " + MODES[other].word;
+  switchEl.dataset.mode = other;
+  if (push) history.pushState(null, "", M.path + location.hash);
+  if (!changed) return;
+  closeMenu(); rankSig = "";
+  if (players.length) layout();
+  asciiEl.classList.remove("flip"); void asciiEl.offsetWidth; asciiEl.classList.add("flip");
+  navigator.vibrate?.(12);
+}
+const modeFromPath = () => location.pathname.replace(/\/+$/, "") === "/cappotti" ? "cappotti" : "bastone";
+switchEl.addEventListener("click", e => { e.preventDefault(); setMode(switchEl.dataset.mode, true); });
+addEventListener("popstate", () => setMode(modeFromPath()));
+setMode(modeFromPath());
 
 </script>
 </body>

@@ -17,7 +17,7 @@ async function authorized(request, env) {
 
 const list = async (env) => {
   const { results } = await env.DB.prepare(
-    "SELECT id, name, hits FROM players ORDER BY created_at, id"
+    "SELECT id, name, hits, coats FROM players ORDER BY created_at, id"
   ).all();
   return json(results);
 };
@@ -28,6 +28,8 @@ export default {
     const { pathname } = url;
     const method = request.method;
 
+    if (pathname === "/cappotti" || pathname === "/cappotti/")
+      return env.ASSETS.fetch(new Request(new URL("/", url), request));
     if (!pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
 
     if (pathname === "/api/players" && method === "GET") return list(env);
@@ -44,19 +46,17 @@ export default {
       return list(env);
     }
 
-    const m = pathname.match(/^\/api\/players\/(\d+)(?:\/(hit|unhit))?$/);
+    const m = pathname.match(/^\/api\/players\/(\d+)(?:\/(un)?(hit|coat))?$/);
     if (m) {
       const id = Number(m[1]);
-      if (method === "DELETE" && !m[2]) {
+      if (method === "DELETE" && !m[3]) {
         await env.DB.prepare("DELETE FROM players WHERE id = ?").bind(id).run();
         return list(env);
       }
-      if (method === "POST" && m[2] === "hit") {
-        await env.DB.prepare("UPDATE players SET hits = hits + 1 WHERE id = ?").bind(id).run();
-        return list(env);
-      }
-      if (method === "POST" && m[2] === "unhit") {
-        await env.DB.prepare("UPDATE players SET hits = MAX(hits - 1, 0) WHERE id = ?").bind(id).run();
+      if (method === "POST" && m[3]) {
+        const col = m[3] === "hit" ? "hits" : "coats"; // whitelisted by the regex
+        const expr = m[2] ? `MAX(${col} - 1, 0)` : `${col} + 1`;
+        await env.DB.prepare(`UPDATE players SET ${col} = ${expr} WHERE id = ?`).bind(id).run();
         return list(env);
       }
     }
