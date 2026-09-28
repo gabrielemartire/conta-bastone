@@ -32,7 +32,24 @@
     user-select: none; -webkit-user-select: none;
     overscroll-behavior: none;
   }
-  #ascii.flip { animation: flip .4s ease-out; }
+  body #ascii.flip { animation: flip .4s ease-out; }
+  body.coat #ascii {
+    text-shadow: -1.5px 0 rgba(255, 40, 110, .55), 1.5px 0 rgba(40, 130, 255, .55), 0 0 6px rgba(var(--hot-rgb), .6);
+    animation: chroma .2s steps(1) infinite;
+  }
+  body.coat #ascii.flip { animation: flip .4s ease-out, chroma .2s steps(1) infinite; }
+  @keyframes chroma {
+    50% { text-shadow: -2.5px 0 rgba(255, 40, 110, .6), 1px 0 rgba(40, 130, 255, .6), 0 0 7px rgba(var(--hot-rgb), .7); }
+  }
+  #vcr {
+    position: fixed; left: 14px; bottom: calc(env(safe-area-inset-bottom) + 30px);
+    font-size: 13px; letter-spacing: 0.2em; line-height: 1.5; display: none;
+    color: #e8fffd; text-shadow: -1px 0 rgba(255,40,110,.7), 1px 0 rgba(40,130,255,.7);
+    opacity: 0.8; pointer-events: none;
+  }
+  body.coat #vcr { display: block; }
+  #vcr b { font-weight: normal; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
   @keyframes flip { from { opacity: 0; transform: scaleY(0.04); filter: brightness(3); } }
   #ascii {
     position: fixed; left: 0; top: 0; margin: 0;
@@ -151,6 +168,7 @@
 <div class="fx vig"></div>
 <a id="lock" class="hud" href="https://github.com/gabrielemartire" target="_blank" rel="noopener" title="github.com/gabrielemartire" aria-label="GitHub"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
 <nav id="title" class="hud"><h1>CONTA <b id="word">BASTONE</b></h1><a id="switch" href="/cappotti">⇄ CAPPOTTI</a></nav>
+<div id="vcr"><b>▶ PLAY</b><br><span id="vcrt">SP 0:00:00</span></div>
 <ol id="rank"></ol>
 <button id="add" aria-label="aggiungi">+</button>
 <div id="menu">
@@ -317,21 +335,48 @@ function buildSquid() {
   }
 }
 
+// VHS / CRT tape look: flicker, rolling tracking band, tears, v-hold slips, snow
+let vhold = null;
 function renderSquid(t) {
   if (!SQ) { asciiEl.textContent = ""; return; }
   if (!sqGrid) buildSquid();
-  const span = innerWidth + innerHeight;
-  const band = ((t * 0.00035) % 1.6 - 0.3) * span; // diagonal shine, chad glow
-  const glitch = Math.random() < 0.04 ? Math.floor(Math.random() * rows) : -1;
+  const s = t / 1000, rnd = Math.random;
+
+  // brightness flicker, with the odd dropout
+  const dip = rnd() < 0.03;
+  asciiEl.style.opacity = dip ? 0.35 + 0.2 * rnd() : 0.82 + 0.18 * rnd();
+  const gain = dip ? 0.7 : 0.9 + 0.2 * rnd();
+
+  // vertical hold slip: picture rolls, then snaps back
+  if (!vhold && rnd() < 0.006) vhold = { t0: t, amp: (rnd() < 0.5 ? -1 : 1) * rows * (0.1 + 0.25 * rnd()) };
+  let voff = 0;
+  if (vhold) {
+    const k = (t - vhold.t0) / 450;
+    if (k >= 1) vhold = null; else voff = Math.round(vhold.amp * (1 - k) * (1 - k));
+  }
+
+  // tracking band crawling down the screen
+  const bandY = ((s * 0.09) % 1.4 - 0.2) * rows, bandH = 3 + 2 * Math.sin(s * 1.3);
+  // one-frame tear
+  const tearAt = rnd() < 0.05 ? Math.floor(rnd() * rows) : -99;
+  const tearH = 1 + Math.floor(rnd() * 5), tearX = Math.round((rnd() - 0.5) * 16);
+  const wob = rnd() < 0.3 ? 1 : 0;
+
   let out = "";
   for (let r = 0; r < rows; r++) {
-    const shift = r === glitch || r === glitch + 1 ? 2 : 0;
+    const src = (((r + voff) % rows) + rows) % rows;
+    const inBand = Math.abs(r - bandY) < bandH;
+    let shift = Math.round(wob * Math.sin(r * 0.21 + s * 9));
+    if (inBand) shift += Math.round(Math.sin(r * 1.9 + s * 37) * 5);
+    if (r >= tearAt && r < tearAt + tearH) shift += tearX;
+    const base = src * cols;
     for (let c = 0; c < cols; c++) {
-      const v = sqGrid[r * cols + c - shift];
+      const sc = c - shift;
+      let v = sc >= 0 && sc < cols ? sqGrid[base + sc] : 0;
+      if (inBand && rnd() < 0.35) v = v ? rnd() : rnd() < 0.5 ? rnd() * 0.5 : 0;
+      else if (rnd() < 0.004) v = 0.1 + 0.5 * rnd(); // snow
       if (!v) { out += " "; continue; }
-      const d = (c * CW + r * CH * 0.7 - band) / 38;
-      const lum = v + 0.45 * Math.exp(-d * d);
-      out += RAMP[Math.min(RAMP.length - 1, Math.floor(lum * RAMP.length))];
+      out += RAMP[Math.min(RAMP.length - 1, Math.floor(v * gain * RAMP.length))];
     }
     out += "\n";
   }
@@ -691,6 +736,12 @@ entry.addEventListener("submit", e => {
 entry.addEventListener("pointerdown", e => { if (e.target === entry) { entry.classList.remove("open"); input.blur(); } });
 
 /* ───────── page switch ───────── */
+const vcrT = document.getElementById("vcrt"), vcr0 = Date.now();
+setInterval(() => {
+  if (M.key !== "coats") return;
+  const x = Math.floor((Date.now() - vcr0) / 1000);
+  vcrT.textContent = `SP ${Math.floor(x / 3600)}:${String(Math.floor(x / 60) % 60).padStart(2, "0")}:${String(x % 60).padStart(2, "0")}`;
+}, 1000);
 const switchEl = document.getElementById("switch");
 function setMode(name, push) {
   const next = MODES[name], other = name === "cappotti" ? "bastone" : "cappotti";
@@ -707,6 +758,7 @@ function setMode(name, push) {
   if (!changed) return;
   closeMenu(); rankSig = "";
   if (players.length) layout();
+  asciiEl.style.opacity = "";
   asciiEl.classList.remove("flip"); void asciiEl.offsetWidth; asciiEl.classList.add("flip");
   navigator.vibrate?.(12);
 }
