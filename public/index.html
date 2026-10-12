@@ -816,7 +816,7 @@ entry.addEventListener("pointerdown", e => { if (e.target === entry) { entry.cla
 
 /* ───────── star popup ───────── */
 const starEl = document.getElementById("star");
-const STAR_SNOOZE = 3 * 864e5;
+const STAR_SNOOZE = 10 * 60e3;
 function starDue() {
   try {
     const v = localStorage.getItem("star"); // "done" or the time it was last dismissed
