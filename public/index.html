@@ -58,6 +58,24 @@
     text-shadow: 0 0 6px rgba(var(--hot-rgb), 0.55);
     white-space: pre; pointer-events: none;
   }
+  /* santa hat layers over the club: red felt, white fur */
+  #hat, #fur { position: fixed; left: 0; top: 0; margin: 0; font: 9px/9px var(--font); white-space: pre; pointer-events: none; }
+  #hat { color: rgba(255, 45, 55, .8); text-shadow: 0 0 6px rgba(255, 45, 55, .7); }
+  #fur { color: rgba(255, 255, 255, .85); text-shadow: 0 0 6px rgba(255, 255, 255, .6); }
+  /* halloween: a pumpkin with the github cat carved in takes the logo's place; now and then the cat lights up */
+  #lock .pk { display: none; }
+  #lock .pk .cat { fill: var(--bg); }
+  body.spooky #lock { opacity: 1; }
+  body.spooky #lock .gh { display: none; }
+  body.spooky #lock .pk {
+    display: block; width: 28px; height: 28px; margin: -3px;
+    filter: drop-shadow(0 0 5px rgba(255, 120, 0, .8));
+  }
+  body.spooky #lock .pk .cat { animation: lit 7s steps(1) infinite; }
+  @keyframes lit {
+    0%, 41.5%, 47%, 83%, 86%, 91% { fill: var(--bg); filter: none; }
+    40%, 43%, 82%, 84.5%, 87% { fill: #ffe066; filter: drop-shadow(0 0 1.5px #ffe066); }
+  }
   #radar { position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; }
   .fx { position: fixed; inset: 0; pointer-events: none; }
   .scan {
@@ -197,14 +215,23 @@
     position: absolute; top: 0; right: 0; width: 34px; height: 34px;
     background: none; border: 0; box-shadow: none; font-size: 16px; opacity: 0.6;
   }
+
 </style>
 </head>
 <body>
 <pre id="ascii"></pre>
+<pre id="hat"></pre>
+<pre id="fur"></pre>
 <canvas id="radar"></canvas>
 <div class="fx scan"></div>
 <div class="fx vig"></div>
-<a id="lock" class="hud" href="https://github.com/gabrielemartire" target="_blank" rel="noopener" title="github.com/gabrielemartire" aria-label="GitHub"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+<a id="lock" class="hud" href="https://github.com/gabrielemartire" target="_blank" rel="noopener" title="github.com/gabrielemartire" aria-label="GitHub"><svg class="gh" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><svg class="pk" viewBox="0 0 32 32" aria-hidden="true">
+  <mask id="pkm" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16"><circle cx="8" cy="8" r="7.7" fill="#fff"/><path fill="#000" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></mask>
+  <g fill="#ff8c14"><ellipse cx="6.8" cy="18.6" rx="5.6" ry="8"/><ellipse cx="25.2" cy="18.6" rx="5.6" ry="8"/><ellipse cx="11" cy="18.2" rx="6.6" ry="9.4"/><ellipse cx="21" cy="18.2" rx="6.6" ry="9.4"/><ellipse cx="16" cy="18" rx="6" ry="10"/></g>
+  <g fill="none" stroke="#8a3c00" stroke-width=".6"><ellipse cx="11" cy="18.2" rx="6.6" ry="9.4"/><ellipse cx="21" cy="18.2" rx="6.6" ry="9.4"/><ellipse cx="16" cy="18" rx="6" ry="10"/></g>
+  <rect class="cat" width="16" height="16" mask="url(#pkm)" transform="translate(7.2,9.6) scale(1.1)"/>
+  <g fill="none" stroke="#46ff64" stroke-linecap="round"><path d="M15.6 9.6C15.2 6.6 16.6 4.4 19 3.2" stroke-width="2.4"/><path d="M17.2 6C20 4.4 23.2 5.8 22.2 8.4C21.5 10 19.6 9.3 20.4 8" stroke-width="1"/></g>
+</svg></a>
 <nav id="title" class="hud"><h1>CONTA <b id="word">BASTONE</b></h1><a id="switch" href="/cappotti">⇄ CAPPOTTI</a></nav>
 <div id="vcr"><b>▶ PLAY</b><br><span id="vcrt">SP 0:00:00</span></div>
 <ol id="rank"></ol>
@@ -229,6 +256,11 @@
 <script>
 /* ───────── token ───────── */
 const params = new URLSearchParams(location.hash.slice(1) || location.search.slice(1));
+// christmas dress-up from 1 december to the epiphany (or ?xmas to preview)
+const XMAS = params.has("xmas") || (d => d.getMonth() === 11 || (d.getMonth() === 0 && d.getDate() <= 6))(new Date());
+// pumpkin logo from 14 october to 4 november (or ?halloween to preview)
+if (params.has("halloween") || (d => (d.getMonth() === 9 && d.getDate() >= 14) || (d.getMonth() === 10 && d.getDate() <= 4))(new Date()))
+  document.body.classList.add("spooky");
 let token = params.get("k") || (() => { try { return localStorage.getItem("k"); } catch { return null; } })();
 
 async function api(path, opts = {}) {
@@ -268,11 +300,13 @@ const val = p => p[M.key];
 
 /* ───────── ASCII ace of clubs (3D) ───────── */
 const asciiEl = document.getElementById("ascii");
+const hatEl = document.getElementById("hat"), furEl = document.getElementById("fur");
+let MAT = 0; // material of the points being added: 0 club, 1 red felt, 2 white fur
 const RAMP = ".,-~:;=!*#$@";
 const PTS = [];
 const add = (x, y, z, nx, ny, nz, two = false) => {
   const l = Math.hypot(nx, ny, nz) || 1;
-  PTS.push(x, y, z, nx / l, ny / l, nz / l, two ? 1 : 0);
+  PTS.push(x, y, z, nx / l, ny / l, nz / l, (two ? 1 : 0) | MAT << 1);
 };
 
 // shaft: tapered, knobbly, slightly bent club
@@ -334,9 +368,33 @@ for (const [t, a, dir, L, W] of [
     }
   }
 }
+// santa hat: fur brim around the top, floppy cone, pompom
+if (XMAS) {
+  const [hx, hy] = axisAt(1), rb = radius(1) + 0.03;
+  MAT = 2;
+  for (let a = 0; a < Math.PI * 2; a += 0.07)
+    for (let p = 0; p < Math.PI * 2; p += 0.3) {
+      const c = Math.cos(a), s = Math.sin(a), q = rb + 0.045 * Math.cos(p);
+      add(hx + q * c, hy + 0.02 + 0.045 * Math.sin(p), q * s, Math.cos(p) * c, Math.sin(p), Math.cos(p) * s);
+    }
+  MAT = 1;
+  const tip = u => [hx + 0.48 * u * u, hy + 0.05 + 1.3 * u - 0.72 * u * u];
+  for (let u = 0; u <= 1; u += 0.012) {
+    const [cx, cy] = tip(u), r = rb * (1 - u) + 0.025;
+    for (let a = 0; a < Math.PI * 2; a += 0.09) add(cx + r * Math.cos(a), cy, r * Math.sin(a), Math.cos(a), 0.45, Math.sin(a));
+  }
+  MAT = 2;
+  const [px, py] = tip(1);
+  for (let p = 0; p <= Math.PI; p += 0.25)
+    for (let b = 0; b < Math.PI * 2; b += 0.25) {
+      const nx = Math.sin(p) * Math.cos(b), ny = Math.cos(p), nz = Math.sin(p) * Math.sin(b);
+      add(px + 0.03 + 0.085 * nx, py + 0.085 * ny, 0.085 * nz, nx, ny, nz);
+    }
+  MAT = 0;
+}
 
 const LIGHT = (() => { const v = [-0.35, 0.55, -0.75], l = Math.hypot(...v); return v.map(x => x / l); })();
-let cols = 0, rows = 0, zbuf, cbuf, CW = 9 * 0.6;
+let cols = 0, rows = 0, zbuf, cbuf, mbuf, CW = 9 * 0.6;
 const CH = 9;
 function sizeAscii() {
   const probe = document.createElement("span");
@@ -349,6 +407,7 @@ function sizeAscii() {
   rows = Math.ceil(innerHeight / CH);
   zbuf = new Float32Array(cols * rows);
   cbuf = new Uint8Array(cols * rows);
+  mbuf = new Uint8Array(cols * rows);
   sqGrid = null;
 }
 
@@ -457,15 +516,24 @@ function renderAscii(A) {
     if (ooz <= zbuf[k]) continue;
     zbuf[k] = ooz;
     let lum = nx2 * LIGHT[0] + ny3 * LIGHT[1] + nz3 * LIGHT[2];
-    if (PTS[i + 6]) lum = Math.abs(lum);
+    const mat = PTS[i + 6] >> 1;
+    if (PTS[i + 6] & 1) lum = Math.abs(lum);
+    if (mat) lum = 0.35 + 0.65 * Math.max(0, lum); // the hat stays solid even in shade
     cbuf[k] = 1 + Math.max(0, Math.min(RAMP.length - 1, Math.floor(lum * RAMP.length)));
+    mbuf[k] = mat;
   }
-  let out = "";
+  let out = "", hat = "", fur = "";
   for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) { const v = cbuf[r * cols + c]; out += v ? RAMP[v - 1] : " "; }
+    for (let c = 0; c < cols; c++) {
+      const v = cbuf[r * cols + c], ch = v ? RAMP[v - 1] : " ", m = v ? mbuf[r * cols + c] : 0;
+      out += m ? " " : ch;
+      if (XMAS) { hat += m === 1 ? ch : " "; fur += m === 2 ? ch : " "; }
+    }
     out += "\n";
+    if (XMAS) { hat += "\n"; fur += "\n"; }
   }
   asciiEl.textContent = out;
+  if (XMAS) { hatEl.textContent = hat; furEl.textContent = fur; }
 }
 
 /* ───────── blips ───────── */
@@ -593,11 +661,28 @@ rankEl.addEventListener("click", e => {
   navigator.vibrate?.(8);
 });
 
+// very light snowfall in december
+const FLAKES = XMAS ? Array.from({ length: 36 }, () => ({
+  x: Math.random(), y: Math.random(), v: 0.02 + 0.03 * Math.random(),
+  ph: Math.random() * 6.28, ch: "·.*"[Math.floor(Math.random() * 3)],
+})) : [];
+function drawSnow(t, dt) {
+  ctx.font = `11px "Share Tech Mono", monospace`; ctx.textAlign = "center";
+  const n = Math.min(FLAKES.length, Math.round(W * H / 30000)); // fewer on small screens
+  for (let i = 0; i < n; i++) {
+    const f = FLAKES[i];
+    f.y += f.v * dt; if (f.y > 1.02) { f.y = -0.02; f.x = Math.random(); }
+    ctx.fillStyle = `rgba(255,255,255,${0.3 + 0.2 * Math.sin(t / 900 + f.ph)})`;
+    ctx.fillText(f.ch, (f.x + 0.012 * Math.sin(t / 1700 + f.ph)) * W, f.y * H);
+  }
+}
+
 function blipPos(v) { return [CX + Math.cos(v.a) * v.r, CY + Math.sin(v.a) * v.r]; }
 
 function drawRadar(t, dt) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
+  if (XMAS) drawSnow(t, dt);
 
   // invisible sweep: blips flare as it passes, no radar drawn
   sweep = (sweep + dt * 1.4) % (Math.PI * 2);
@@ -702,7 +787,7 @@ function frame(t) {
   spin += dt * 0.9 * (1 + 5 * k);
   if (k !== boostK) {
     boostK = k;
-    asciiEl.style.filter = k ? `brightness(${1 + 1.3 * k})` : "";
+    hatEl.style.filter = furEl.style.filter = asciiEl.style.filter = k ? `brightness(${1 + 1.3 * k})` : "";
     asciiEl.style.textShadow = k ? `0 0 ${6 + 10 * k}px rgba(var(--hot-rgb), ${0.55 + 0.45 * k})` : "";
   }
   asciiAcc += dt;
@@ -950,6 +1035,7 @@ function setMode(name, push) {
   closeMenu(); rankSig = "";
   if (players.length) layout();
   asciiEl.style.opacity = "";
+  hatEl.textContent = furEl.textContent = "";
   asciiEl.classList.remove("flip"); void asciiEl.offsetWidth; asciiEl.classList.add("flip");
   navigator.vibrate?.(12);
 }
