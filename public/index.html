@@ -771,7 +771,7 @@ cv.addEventListener("pointerup", () => {
   const p = players.find(q => q.id === id); if (!p) return;
   p[M.key]++; layout();
   view.get(id)?.pings.push(performance.now());
-  if (M.key !== "coats") boostAt = performance.now();
+  if (M.key !== "coats") { boostAt = performance.now(); drums(); } else jingle();
   navigator.vibrate?.(25);
   mutate(`/api/players/${id}/${M.act}`, { method: "POST" });
 });
@@ -813,6 +813,97 @@ entry.addEventListener("submit", e => {
   if (name) mutate("/api/players", { method: "POST", body: JSON.stringify({ name }) });
 });
 entry.addEventListener("pointerdown", e => { if (e.target === entry) { entry.classList.remove("open"); input.blur(); } });
+
+/* ───────── jingle ───────── */
+// ~6s happy chiptune fanfare for a coat: arpeggios climbing key by key, a run up,
+// three stabs and a long final chord with sparkles on top: [wave, midi note, start s, length s]
+const JINGLE = [];
+[0, 2, 4, 5, 7].forEach((key, i) => {
+  [0, 4, 7, 12].forEach((n, j) => JINGLE.push(["square", 60 + key + n, i * .5 + j * .125, .16]));
+  JINGLE.push(["triangle", 48 + key, i * .5, .5]);
+});
+[79, 81, 83, 86].forEach((n, j) => JINGLE.push(["square", n, 2.5 + j * .125, .16]));
+JINGLE.push(["triangle", 43, 2.5, .5]);
+for (const [at, len] of [[3, .2], [3.25, .1], [3.375, .1]])
+  JINGLE.push(["square", 86, at, len], ["triangle", 79, at, len], ["triangle", 83, at, len], ["triangle", 43, at, len]);
+JINGLE.push(["square", 91, 3.5, 2.5]);
+for (const n of [36, 48, 84, 88]) JINGLE.push(["triangle", n, 3.5, 2.5]);
+[[3.75, [91, 96, 100, 103]], [4.5, [96, 100, 103, 108]]].forEach(([at, ns]) =>
+  ns.forEach((n, j) => JINGLE.push(["triangle", n, at + j * .125, .3])));
+let actx = null, jingleOut = null, noiseBuf = null;
+function audioBus(vol, gritty) {
+  actx ??= new (window.AudioContext || window.webkitAudioContext)();
+  actx.resume();
+  jingleOut?.disconnect(); // a new hit cuts the one still playing
+  jingleOut = actx.createGain();
+  jingleOut.gain.value = vol;
+  jingleOut.connect(gritty ? grit() : actx.destination);
+  return jingleOut;
+}
+// overdrive + compressor, so the drums hit hard without clipping
+let gritIn = null;
+function grit() {
+  if (!gritIn) {
+    gritIn = actx.createWaveShaper();
+    const curve = new Float32Array(1024);
+    for (let i = 0; i < 1024; i++) curve[i] = Math.tanh((i / 511.5 - 1) * 5);
+    gritIn.curve = curve; gritIn.oversample = "2x";
+    const comp = actx.createDynamicsCompressor(), vol = actx.createGain();
+    vol.gain.value = 0.7;
+    gritIn.connect(comp).connect(vol).connect(actx.destination);
+  }
+  return gritIn;
+}
+function jingle() {
+  try {
+    const out = audioBus(0.12), t0 = actx.currentTime + 0.02;
+    for (const [wave, note, at, len] of JINGLE) {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = wave; o.frequency.value = 440 * 2 ** ((note - 69) / 12);
+      g.gain.setValueAtTime(0, t0 + at);
+      g.gain.linearRampToValueAtTime(wave === "square" ? 0.6 : 1, t0 + at + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + at + len);
+      o.connect(g).connect(out);
+      o.start(t0 + at); o.stop(t0 + at + len);
+    }
+  } catch {}
+}
+// war drums, ~2s: BOTTA, rising roll, BOTTA BOTTA going up: [start s, pitch Hz, level, ring s]
+const DRUMS = [[0, 56, 1, .45]];
+for (let i = 0; i < 8; i++) DRUMS.push([.2 + i * .06, 90 + i * 9, .4 + i * .08, .11]);
+DRUMS.push([.74, 62, 1, .3], [.94, 72, 1, .9]);
+function drums() {
+  try {
+    const out = audioBus(0.8, true), t0 = actx.currentTime + 0.02;
+    if (!noiseBuf) {
+      noiseBuf = actx.createBuffer(1, Math.floor(actx.sampleRate * 0.08), actx.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    for (const [at, hz, lvl, ring] of DRUMS) {
+      const t = t0 + at, g = actx.createGain();
+      g.gain.setValueAtTime(lvl, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + ring);
+      g.connect(out);
+      // skin, an overtone and a sub, pitch dropping fast like a struck drum
+      for (const [wave, mul, amp] of [["triangle", 1, 1], ["sine", 1.5, 0.35], ["sine", 0.5, 0.6]]) {
+        const o = actx.createOscillator(), og = actx.createGain();
+        o.type = wave; og.gain.value = amp;
+        o.frequency.setValueAtTime(hz * mul * 2.4, t);
+        o.frequency.exponentialRampToValueAtTime(hz * mul, t + 0.07);
+        o.connect(og).connect(g);
+        o.start(t); o.stop(t + ring);
+      }
+      // stick slap
+      const n = actx.createBufferSource(), ng = actx.createGain(), lp = actx.createBiquadFilter();
+      n.buffer = noiseBuf; lp.type = "lowpass"; lp.frequency.value = 1800;
+      ng.gain.setValueAtTime(lvl * 0.7, t);
+      ng.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+      n.connect(lp).connect(ng).connect(out);
+      n.start(t);
+    }
+  } catch {}
+}
 
 /* ───────── star popup ───────── */
 const starEl = document.getElementById("star");
