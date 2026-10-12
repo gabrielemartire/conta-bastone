@@ -164,6 +164,39 @@
     box-shadow: 0 0 22px var(--radar-dim);
     caret-color: var(--hot);
   }
+
+  #star {
+    position: fixed; inset: 0; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(2, 8, 7, 0.6); backdrop-filter: blur(2px);
+  }
+  #star.open { display: flex; }
+  #star .box {
+    position: relative; width: min(86vw, 340px); padding: 28px 18px 18px; text-align: center;
+    background: rgba(2, 8, 7, 0.92); border: 1px solid var(--radar);
+    box-shadow: 0 0 22px var(--radar-dim), inset 0 0 18px var(--radar-dim);
+    text-shadow: 0 0 8px var(--radar);
+    animation: flip .4s ease-out;
+  }
+  #star .glyph {
+    font-size: 30px; letter-spacing: 0.3em; margin-right: -0.3em;
+    color: var(--hot); text-shadow: 0 0 12px var(--hot);
+    animation: blink 1s steps(1) infinite;
+  }
+  #star p { margin: 14px 0 20px; font-size: 14px; line-height: 1.6; letter-spacing: 0.18em; }
+  #star .row { display: flex; gap: 10px; }
+  #star .btn {
+    flex: 1; padding: 12px 4px; font: 12px var(--font); letter-spacing: 0.14em;
+    text-decoration: none; text-shadow: none;
+  }
+  #star .go {
+    background: var(--hot); color: var(--bg); border: 1px solid var(--hot);
+    box-shadow: 0 0 14px rgba(var(--hot-rgb), .45);
+  }
+  #star .x {
+    position: absolute; top: 0; right: 0; width: 34px; height: 34px;
+    background: none; border: 0; box-shadow: none; font-size: 16px; opacity: 0.6;
+  }
 </style>
 </head>
 <body>
@@ -181,6 +214,17 @@
   <button class="del" aria-label="rimuovi">×</button>
 </div>
 <form id="entry"><input maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done"></form>
+<div id="star" role="dialog" aria-modal="true" aria-labelledby="starq">
+  <div class="box">
+    <button class="x" type="button" aria-label="chiudi">×</button>
+    <div class="glyph" aria-hidden="true">[★]</div>
+    <p id="starq">HAI MESSO LA STELLA<br>ALLA REPO?</p>
+    <div class="row">
+      <button class="btn done" type="button">GIÀ FATTO</button>
+      <a class="btn go" href="https://github.com/gabrielemartire/conta-bastone" target="_blank" rel="noopener">ANCORA NO</a>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ───────── token ───────── */
@@ -769,6 +813,27 @@ entry.addEventListener("submit", e => {
   if (name) mutate("/api/players", { method: "POST", body: JSON.stringify({ name }) });
 });
 entry.addEventListener("pointerdown", e => { if (e.target === entry) { entry.classList.remove("open"); input.blur(); } });
+
+/* ───────── star popup ───────── */
+const starEl = document.getElementById("star");
+const STAR_SNOOZE = 3 * 864e5;
+function starDue() {
+  try {
+    const v = localStorage.getItem("star"); // "done" or the time it was last dismissed
+    return v !== "done" && !(Date.now() - Number(v) < STAR_SNOOZE);
+  } catch { return true; }
+}
+function closeStar(done) {
+  if (!starEl.classList.contains("open")) return;
+  starEl.classList.remove("open");
+  try { localStorage.setItem("star", done ? "done" : Date.now()); } catch {}
+}
+if (starDue()) starEl.classList.add("open");
+starEl.querySelector(".done").addEventListener("click", () => closeStar(true));
+starEl.querySelector(".go").addEventListener("click", () => closeStar(true));
+starEl.querySelector(".x").addEventListener("click", () => closeStar(false));
+starEl.addEventListener("pointerdown", e => { if (e.target === starEl) closeStar(false); });
+addEventListener("keydown", e => { if (e.key === "Escape") closeStar(false); });
 
 /* ───────── page switch ───────── */
 const vcrT = document.getElementById("vcrt"), vcr0 = Date.now();
