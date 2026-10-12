@@ -258,8 +258,8 @@
 const params = new URLSearchParams(location.hash.slice(1) || location.search.slice(1));
 // christmas dress-up from 1 december to the epiphany (or ?xmas to preview)
 const XMAS = params.has("xmas") || (d => d.getMonth() === 11 || (d.getMonth() === 0 && d.getDate() <= 6))(new Date());
-// pumpkin logo from 14 october to 4 november (or ?halloween to preview)
-if (params.has("halloween") || (d => (d.getMonth() === 9 && d.getDate() >= 14) || (d.getMonth() === 10 && d.getDate() <= 4))(new Date()))
+// pumpkin logo from 13 october to 4 november (or ?halloween to preview)
+if (params.has("halloween") || (d => (d.getMonth() === 9 && d.getDate() >= 13) || (d.getMonth() === 10 && d.getDate() <= 4))(new Date()))
   document.body.classList.add("spooky");
 let token = params.get("k") || (() => { try { return localStorage.getItem("k"); } catch { return null; } })();
 
