@@ -925,7 +925,7 @@ function audioBus(vol, gritty) {
   jingleOut.connect(gritty ? grit() : actx.destination);
   return jingleOut;
 }
-// overdrive + compressor, so the drums hit hard without clipping
+// overdrive + compressor so the drums hit hard without clipping, then a long dark cave around them
 let gritIn = null;
 function grit() {
   if (!gritIn) {
@@ -936,6 +936,15 @@ function grit() {
     const comp = actx.createDynamicsCompressor(), vol = actx.createGain();
     vol.gain.value = 0.7;
     gritIn.connect(comp).connect(vol).connect(actx.destination);
+    const hall = actx.createConvolver(), wet = actx.createGain();
+    const len = Math.floor(actx.sampleRate * 2.6), ir = actx.createBuffer(2, len, actx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ir.getChannelData(ch);
+      let low = 0; // smoothed noise: the echo comes back dull, like off stone
+      for (let i = 0; i < len; i++) d[i] = (low += (Math.random() * 2 - 1 - low) * 0.12) * (1 - i / len) ** 2.5;
+    }
+    hall.buffer = ir; wet.gain.value = 0.6;
+    vol.connect(hall).connect(wet).connect(actx.destination);
   }
   return gritIn;
 }
@@ -953,41 +962,51 @@ function jingle() {
     }
   } catch {}
 }
-// war drums, ~2s: BOTTA, rising roll, BOTTA BOTTA going up: [start s, pitch Hz, level, ring s]
-const DRUMS = [[0, 56, 1, .45]];
-for (let i = 0; i < 8; i++) DRUMS.push([.2 + i * .06, 90 + i * 9, .4 + i * .08, .11]);
-DRUMS.push([.74, 62, 1, .3], [.94, 72, 1, .9]);
+// war drums: TUM-turutum TUM-turutum TUM! The two groups are identical. [start s, pitch Hz, level, ring s]
+const DRUMS = [];
+for (const t of [0, .82])
+  DRUMS.push([t, 46, 1, .55], [t + .25, 88, .48, .14], [t + .375, 80, .54, .14], [t + .5, 58, .72, .3]);
+DRUMS.push([1.64, 38, 1, 2.6]); // one closing blow, left to rumble
 function drums() {
   try {
-    const out = audioBus(0.8, true), t0 = actx.currentTime + 0.02;
+    const out = audioBus(0.7, true), t0 = actx.currentTime + 0.02;
     if (!noiseBuf) {
-      noiseBuf = actx.createBuffer(1, Math.floor(actx.sampleRate * 0.08), actx.sampleRate);
+      noiseBuf = actx.createBuffer(1, Math.floor(actx.sampleRate * 0.4), actx.sampleRate);
       const d = noiseBuf.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     }
     for (const [at, hz, lvl, ring] of DRUMS) {
-      const t = t0 + at, g = actx.createGain();
-      g.gain.setValueAtTime(lvl, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + ring);
-      g.connect(out);
-      // skin, an overtone and a sub, pitch dropping fast like a struck drum
-      for (const [wave, mul, amp] of [["triangle", 1, 1], ["sine", 1.5, 0.35], ["sine", 0.5, 0.6]]) {
-        const o = actx.createOscillator(), og = actx.createGain();
-        o.type = wave; og.gain.value = amp;
-        o.frequency.setValueAtTime(hz * mul * 2.4, t);
-        o.frequency.exponentialRampToValueAtTime(hz * mul, t + 0.07);
-        o.connect(og).connect(g);
-        o.start(t); o.stop(t + ring);
-      }
-      // stick slap
-      const n = actx.createBufferSource(), ng = actx.createGain(), lp = actx.createBiquadFilter();
-      n.buffer = noiseBuf; lp.type = "lowpass"; lp.frequency.value = 1800;
-      ng.gain.setValueAtTime(lvl * 0.7, t);
-      ng.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
-      n.connect(lp).connect(ng).connect(out);
-      n.start(t);
+      drumHit(out, t0 + at, hz, lvl, ring);
+      // a war band, not one drummer: the others land a hair late and a bit lower
+      for (let i = 1; i < (lvl > 0.7 ? 4 : 2); i++)
+        drumHit(out, t0 + at + 0.008 * i + 0.012 * Math.random(), hz * (1 - 0.05 * i), lvl * 0.55, ring);
     }
   } catch {}
+}
+function drumHit(out, t, hz, lvl, ring) {
+  const g = actx.createGain();
+  g.gain.setValueAtTime(lvl, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + ring);
+  g.connect(out);
+  // skin: a note that drops fast, plus the out-of-tune overtones of a real drumhead [ratio, level, length]
+  for (const [mul, amp, len] of [[1, 1, 1], [1.59, .45, .5], [2.14, .3, .35], [2.65, .2, .25]]) {
+    const o = actx.createOscillator(), og = actx.createGain();
+    o.frequency.setValueAtTime(hz * mul * 2.6, t);
+    o.frequency.exponentialRampToValueAtTime(hz * mul, t + 0.045);
+    og.gain.setValueAtTime(amp, t);
+    og.gain.exponentialRampToValueAtTime(0.001, t + ring * len);
+    o.connect(og).connect(g);
+    o.start(t); o.stop(t + ring);
+  }
+  // body: a thud of low noise, then the crack of the stick
+  for (const [type, freq, amp, len] of [["bandpass", hz * 3.2, 1.4, Math.min(.35, ring * .5)], ["highpass", 2500, .25, .02]]) {
+    const n = actx.createBufferSource(), ng = actx.createGain(), f = actx.createBiquadFilter();
+    n.buffer = noiseBuf; f.type = type; f.frequency.value = freq; f.Q.value = 0.9;
+    ng.gain.setValueAtTime(lvl * amp, t);
+    ng.gain.exponentialRampToValueAtTime(0.001, t + len);
+    n.connect(f).connect(ng).connect(out);
+    n.start(t, Math.random() * 0.2); n.stop(t + len + 0.01);
+  }
 }
 
 /* ───────── star popup ───────── */
