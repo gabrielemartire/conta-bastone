@@ -139,6 +139,8 @@
   }
   #rank li span { max-width: 11ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #rank li b { min-width: 2ch; text-align: right; font-weight: normal; }
+  /* bastoni of the last 15 hours */
+  #rank li em { font-style: normal; font-size: 11px; color: rgb(60, 200, 255); text-shadow: 0 0 6px rgb(60, 200, 255); }
   #rank li.lead { color: var(--hot); text-shadow: 0 0 6px var(--hot); }
   #rank li.on {
     opacity: 1; border-right-color: currentColor;
@@ -183,13 +185,13 @@
     caret-color: var(--hot);
   }
 
-  #star {
+  .modal {
     position: fixed; inset: 0; display: none;
     align-items: center; justify-content: center;
     background: rgba(2, 8, 7, 0.6); backdrop-filter: blur(2px);
   }
-  #star.open { display: flex; }
-  #star .box {
+  .modal.open { display: flex; }
+  .modal .box {
     position: relative; width: min(86vw, 340px); padding: 28px 18px 18px; text-align: center;
     background: rgba(2, 8, 7, 0.92); border: 1px solid var(--radar);
     box-shadow: 0 0 22px var(--radar-dim), inset 0 0 18px var(--radar-dim);
@@ -202,19 +204,47 @@
     animation: blink 1s steps(1) infinite;
   }
   #star p { margin: 14px 0 20px; font-size: 14px; line-height: 1.6; letter-spacing: 0.18em; }
-  #star .row { display: flex; gap: 10px; }
-  #star .btn {
+  .modal .row { display: flex; gap: 10px; }
+  .modal .btn {
     flex: 1; padding: 12px 4px; font: 12px var(--font); letter-spacing: 0.14em;
     text-decoration: none; text-shadow: none;
   }
-  #star .go {
+  .modal .go {
     background: var(--hot); color: var(--bg); border: 1px solid var(--hot);
     box-shadow: 0 0 14px rgba(var(--hot-rgb), .45);
   }
-  #star .x {
+  .modal .x {
     position: absolute; top: 0; right: 0; width: 34px; height: 34px;
     background: none; border: 0; box-shadow: none; font-size: 16px; opacity: 0.6;
   }
+
+  /* bastoni log, token holders only */
+  #logbtn {
+    position: fixed; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 27px);
+    width: 44px; height: 44px; border-radius: 50%; padding: 0; display: none;
+  }
+  #logbtn svg { display: block; width: 20px; height: 20px; margin: auto; filter: drop-shadow(0 0 4px currentColor); }
+  body.armed #logbtn { display: block; }
+  #log .box { width: min(92vw, 460px); text-align: left; }
+  #log h2 { margin: 0 0 4px; font-size: 14px; font-weight: normal; letter-spacing: 0.22em; }
+  #log h2 b { font-weight: normal; color: var(--hot); text-shadow: 0 0 10px var(--hot); }
+  #log .sum { margin: 0 0 12px; font-size: 11px; letter-spacing: 0.14em; opacity: 0.7; }
+  #log .scroll {
+    max-height: min(56vh, 460px); overflow-y: auto; margin-bottom: 14px;
+    border-top: 1px solid var(--radar-dim); border-bottom: 1px solid var(--radar-dim);
+    user-select: text; -webkit-user-select: text;
+  }
+  #log table { width: 100%; border-collapse: collapse; font-size: 13px; letter-spacing: 0.08em; }
+  #log th {
+    position: sticky; top: 0; padding: 8px 6px; text-align: left; font-weight: normal;
+    font-size: 10px; letter-spacing: 0.2em; opacity: 0.8; background: rgb(2, 12, 10);
+  }
+  #log td { padding: 7px 6px; border-top: 1px solid rgba(25, 255, 176, 0.08); white-space: nowrap; }
+  #log td:nth-child(2) { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  #log td.n, #log th.n { width: 1%; padding-right: 10px; text-align: right; opacity: 0.45; }
+  #log tbody tr:nth-child(even) { background: rgba(25, 255, 176, 0.035); }
+  #log tr.fresh td { color: rgb(60, 200, 255); text-shadow: 0 0 6px rgb(60, 200, 255); }
+  #log .empty { padding: 26px 6px; text-align: center; opacity: 0.6; letter-spacing: 0.14em; font-size: 12px; }
 
 </style>
 </head>
@@ -241,7 +271,17 @@
   <button class="del" aria-label="rimuovi">×</button>
 </div>
 <form id="entry"><input maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done"></form>
-<div id="star" role="dialog" aria-modal="true" aria-labelledby="starq">
+<button id="logbtn" type="button" aria-label="registro bastoni"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M5.5 4h8M5.5 8h8M5.5 12h8"/><circle cx="2.6" cy="4" r=".6" fill="currentColor"/><circle cx="2.6" cy="8" r=".6" fill="currentColor"/><circle cx="2.6" cy="12" r=".6" fill="currentColor"/></svg></button>
+<div id="log" class="modal" role="dialog" aria-modal="true" aria-labelledby="logq">
+  <div class="box">
+    <button class="x" type="button" aria-label="chiudi">×</button>
+    <h2 id="logq">REGISTRO <b>BASTONI</b></h2>
+    <p class="sum"></p>
+    <div class="scroll"><table><thead><tr><th class="n">#</th><th>NOME</th><th>DATA</th><th>ORA</th></tr></thead><tbody></tbody></table></div>
+    <div class="row"><button class="btn go copy" type="button">COPIA TABELLA</button></div>
+  </div>
+</div>
+<div id="star" class="modal" role="dialog" aria-modal="true" aria-labelledby="starq">
   <div class="box">
     <button class="x" type="button" aria-label="chiudi">×</button>
     <div class="glyph" aria-hidden="true">[★]</div>
@@ -258,9 +298,9 @@
 const params = new URLSearchParams(location.hash.slice(1) || location.search.slice(1));
 // christmas dress-up from 1 december to the epiphany (or ?xmas to preview)
 const XMAS = params.has("xmas") || (d => d.getMonth() === 11 || (d.getMonth() === 0 && d.getDate() <= 6))(new Date());
-// pumpkin logo from 13 october to 4 november (or ?halloween to preview)
-if (params.has("halloween") || (d => (d.getMonth() === 9 && d.getDate() >= 13) || (d.getMonth() === 10 && d.getDate() <= 4))(new Date()))
-  document.body.classList.add("spooky");
+// halloween from 13 october to 4 november (or ?halloween to preview): pumpkin logo, blood on the club
+const SPOOKY = params.has("halloween") || (d => (d.getMonth() === 9 && d.getDate() >= 13) || (d.getMonth() === 10 && d.getDate() <= 4))(new Date());
+if (SPOOKY) document.body.classList.add("spooky");
 let token = params.get("k") || (() => { try { return localStorage.getItem("k"); } catch { return null; } })();
 
 async function api(path, opts = {}) {
@@ -301,7 +341,7 @@ const val = p => p[M.key];
 /* ───────── ASCII ace of clubs (3D) ───────── */
 const asciiEl = document.getElementById("ascii");
 const hatEl = document.getElementById("hat"), furEl = document.getElementById("fur");
-let MAT = 0; // material of the points being added: 0 club, 1 red felt, 2 white fur
+let MAT = 0; // material of the points being added: 0 club, 1 red (hat felt, blood), 2 white fur
 const RAMP = ".,-~:;=!*#$@";
 const PTS = [];
 const add = (x, y, z, nx, ny, nz, two = false) => {
@@ -391,6 +431,22 @@ if (XMAS) {
       add(px + 0.03 + 0.085 * nx, py + 0.085 * ny, 0.085 * nz, nx, ny, nz);
     }
   MAT = 0;
+}
+// halloween: a splash of blood up on the head of the club, with a few drips running down
+const BLOOD_A = 0.9, BLOOD_T = 0.93; // where the splash sits: angle around the club, height along it
+if (SPOOKY) {
+  const gap = (a, b) => Math.abs(((a - b + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+  const A0 = BLOOD_A, T0 = BLOOD_T;
+  for (let i = 0; i < PTS.length; i += 7) {
+    if (PTS[i + 6]) continue; // bare wood only: not leaves, not the hat
+    const t = (PTS[i + 1] - Y0) / LEN;
+    if (t < 0.5) continue;
+    const a = Math.atan2(PTS[i + 2], PTS[i] - bend(t)), dt = t - T0;
+    const blob = Math.hypot(dt / 0.12, gap(a, A0) / 0.95) < 1 + 0.22 * Math.sin(a * 9 + t * 40);
+    const drip = dt < 0 && [[-0.45, 0.22], [0.05, 0.3], [0.5, 0.16]].some(([off, len]) =>
+      dt > -len && gap(a, A0 + off) < (dt < 0.03 - len ? 0.13 : 0.08)); // a fat drop at the end
+    if (blob || drip) PTS[i + 6] = 1 << 1; // red, drawn on the hat layer
+  }
 }
 
 const LIGHT = (() => { const v = [-0.35, 0.55, -0.75], l = Math.hypot(...v); return v.map(x => x / l); })();
@@ -491,13 +547,24 @@ function renderSquid(t) {
   asciiEl.textContent = out;
 }
 
+// the club is tilted like the card and leans toward the viewer
+const TILT = -0.42, LEAN = 0.18;
+// screen position of a point on the club at spin A, same maths as renderAscii
+function project(px, py, pz, A) {
+  const S = R * (innerWidth > innerHeight ? 0.72 : 0.9), D = 4;
+  const x = px * Math.cos(A) + pz * Math.sin(A), y = py + 0.12, z = -px * Math.sin(A) + pz * Math.cos(A);
+  const x2 = x * Math.cos(TILT) - y * Math.sin(TILT), y2 = x * Math.sin(TILT) + y * Math.cos(TILT);
+  const y3 = y2 * Math.cos(LEAN) - z * Math.sin(LEAN), z3 = y2 * Math.sin(LEAN) + z * Math.cos(LEAN);
+  const ooz = 1 / (z3 + D);
+  return [CX + x2 * S * D * ooz, CY - y3 * S * D * ooz];
+}
+
 function renderAscii(A) {
   zbuf.fill(0); cbuf.fill(0);
   const W = innerWidth, H = innerHeight;
   const S = R * (W > H ? 0.72 : 0.9), D = 4; // bigger on phones (portrait)
   const ca = Math.cos(A), sa = Math.sin(A);
-  const tilt = -0.42, ct = Math.cos(tilt), st = Math.sin(tilt);
-  const lean = 0.18, cl = Math.cos(lean), sl = Math.sin(lean);
+  const ct = Math.cos(TILT), st = Math.sin(TILT), cl = Math.cos(LEAN), sl = Math.sin(LEAN);
   for (let i = 0; i < PTS.length; i += 7) {
     // spin around own axis
     let x = PTS[i] * ca + PTS[i + 2] * sa, y = PTS[i + 1] + 0.12, z = -PTS[i] * sa + PTS[i + 2] * ca;
@@ -527,13 +594,13 @@ function renderAscii(A) {
     for (let c = 0; c < cols; c++) {
       const v = cbuf[r * cols + c], ch = v ? RAMP[v - 1] : " ", m = v ? mbuf[r * cols + c] : 0;
       out += m ? " " : ch;
-      if (XMAS) { hat += m === 1 ? ch : " "; fur += m === 2 ? ch : " "; }
+      if (XMAS || SPOOKY) { hat += m === 1 ? ch : " "; fur += m === 2 ? ch : " "; }
     }
     out += "\n";
-    if (XMAS) { hat += "\n"; fur += "\n"; }
+    if (XMAS || SPOOKY) { hat += "\n"; fur += "\n"; }
   }
   asciiEl.textContent = out;
-  if (XMAS) { hatEl.textContent = hat; furEl.textContent = fur; }
+  if (XMAS || SPOOKY) { hatEl.textContent = hat; furEl.textContent = fur; }
 }
 
 /* ───────── blips ───────── */
@@ -583,6 +650,8 @@ resize();
 document.fonts?.ready.then(resize);
 
 const GREEN = "25,255,176";
+const AZURE = "60,200,255";
+const fresh = p => M.key === "hits" ? p.recent || 0 : 0; // bastoni of the last 15 hours
 let HOT = MODES.bastone.hot;
 let players = [];
 const view = new Map(); // id -> {r, a, pings:[]}
@@ -607,7 +676,7 @@ const MINUS = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke
 const TRASH = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.8 6.5v5M9.2 6.5v5"/></svg>';
 function renderRank(max) {
   const sorted = [...players].sort((a, b) => val(b) - val(a) || a.name.localeCompare(b.name));
-  const sig = sorted.map(p => p.id + ":" + val(p) + ":" + p.name).join("|");
+  const sig = sorted.map(p => p.id + ":" + val(p) + ":" + p.name + ":" + fresh(p)).join("|");
   if (sig !== rankSig) {
     rankSig = sig;
     rankEl.replaceChildren(...sorted.map(p => {
@@ -621,7 +690,9 @@ function renderRank(max) {
       const minus = document.createElement("button");
       minus.className = "act minus"; minus.type = "button"; minus.setAttribute("aria-label", "togli " + M.one + " a " + p.name);
       minus.innerHTML = MINUS; minus.disabled = val(p) === 0;
-      li.append(del, minus, n, h);
+      li.append(del, minus, n);
+      if (fresh(p)) { const f = document.createElement("em"); f.textContent = "+" + fresh(p); li.append(f); }
+      li.append(h);
       if (max > 0 && val(p) === max) li.classList.add("lead");
       return li;
     }));
@@ -661,6 +732,85 @@ rankEl.addEventListener("click", e => {
   navigator.vibrate?.(8);
 });
 
+// halloween: each time the blood splash swings into view from the right, 2-3 drops fall off it
+const DROPS = [];
+let bloodPsi = 0, bleedLast = 0;
+function bleed(t) {
+  // the splash faces the viewer when this angle is negative; it comes round from behind on the right as it crosses 0
+  let psi = ((BLOOD_A - spin) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+  if (psi > Math.PI) psi -= Math.PI * 2;
+  if (bloodPsi > 0 && psi <= 0)
+    for (let i = 0, n = Math.random() < 0.5 ? 2 : 3; i < n; i++) DROPS.push({ at: t + 120 + i * 220 + Math.random() * 120 });
+  bloodPsi = psi;
+  // fast spin: blood flies off the front of the club, thrown outward by the spin
+  if (boostK > 0.15 && psi < -0.15 && psi > 0.15 - Math.PI)
+    for (let n = boostK * 2.2 * Math.min(3, (t - bleedLast) / 16.7); n > 0; n--) // ~2 per 60fps frame at full speed
+      if (Math.random() < n) spawnSpray(t);
+  bleedLast = t;
+}
+const SPRAY = [], SPLATS = [];
+function spawnSpray(t) {
+  const k = 0.84 + 0.14 * Math.random(), r = radius(k), a = BLOOD_A + (Math.random() - 0.5) * 1.2;
+  const px = bend(k) + r * Math.cos(a), py = Y0 + LEN * k, pz = r * Math.sin(a);
+  const [x, y] = project(px, py, pz, spin), [x2, y2] = project(px, py, pz, spin + 0.03);
+  const [cx, cy] = project(bend(k), py, 0, spin); // the club's axis at that height
+  const tl = Math.hypot(x2 - x, y2 - y) || 1, ol = Math.hypot(x - cx, y - cy) || 1;
+  const sp = 250 + 450 * Math.random(), jit = () => (Math.random() - 0.5) * 80;
+  SPRAY.push({
+    x, y, born: t, life: 500 + 600 * Math.random(), r: 0.8 + 2 * Math.random(),
+    vx: ((x2 - x) / tl * 0.8 + (x - cx) / ol * 0.6) * sp + jit(),
+    vy: ((y2 - y) / tl * 0.8 + (y - cy) / ol * 0.6) * sp + jit(),
+    glass: Math.random() < 0.06 && SPLATS.length < 14, // some hit the screen and stick
+  });
+}
+function drawDrops(t, dt) {
+  ctx.lineCap = "round";
+  for (let i = SPRAY.length - 1; i >= 0; i--) {
+    const d = SPRAY[i], age = (t - d.born) / d.life;
+    if (d.glass && age > 0.35) {
+      SPRAY.splice(i, 1);
+      const r = 4 + 6 * Math.random();
+      SPLATS.push({ x: d.x, y: d.y, r, born: t, drip: 0.4 + Math.random(), dots: Array.from({ length: 3 + Math.floor(Math.random() * 4) }, () =>
+        [Math.random() * Math.PI * 2, r * (1.2 + Math.random()), r * (0.15 + 0.2 * Math.random())]) });
+      continue;
+    }
+    if (age > 1) { SPRAY.splice(i, 1); continue; }
+    d.vy += 900 * dt; d.x += d.vx * dt; d.y += d.vy * dt;
+    ctx.strokeStyle = `rgba(255,20,40,${1 - age})`; ctx.lineWidth = d.r;
+    ctx.beginPath(); ctx.moveTo(d.x - d.vx * 0.02, d.y - d.vy * 0.02); ctx.lineTo(d.x, d.y); ctx.stroke();
+  }
+  // blood on the glass: holds for a moment, runs down a little, fades out
+  for (let i = SPLATS.length - 1; i >= 0; i--) {
+    const s = SPLATS[i], age = (t - s.born) / 1000;
+    if (age > 3) { SPLATS.splice(i, 1); continue; }
+    ctx.fillStyle = ctx.strokeStyle = `rgba(200,0,20,${0.85 * Math.min(1, (3 - age) / 1.5)})`;
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+    for (const [a, dist, rr] of s.dots) { ctx.beginPath(); ctx.arc(s.x + Math.cos(a) * dist, s.y + Math.sin(a) * dist, rr, 0, Math.PI * 2); ctx.fill(); }
+    ctx.lineWidth = s.r * 0.45;
+    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x, s.y + Math.min(age, 2) * 14 * s.drip); ctx.stroke();
+  }
+
+  for (let i = DROPS.length - 1; i >= 0; i--) {
+    const d = DROPS[i];
+    if (t < d.at) continue;
+    if (d.x == null) { // let go from the bottom edge of the splash, wherever it is now
+      const k = 0.8 + 0.06 * Math.random(), r = radius(k), a = BLOOD_A - 0.15 + 0.3 * Math.random();
+      [d.x, d.y] = project(bend(k) + r * Math.cos(a), Y0 + LEN * k, r * Math.sin(a), spin);
+      d.v = 0;
+    }
+    d.v += 1100 * dt; d.y += d.v * dt;
+    const age = (t - d.at) / 1300;
+    if (age > 1 || d.y > H + 20) { DROPS.splice(i, 1); continue; }
+    // round drop with a tail that stretches as it speeds up
+    const tail = Math.min(14, 2 + d.v * 0.02);
+    ctx.fillStyle = `rgba(255,30,45,${1 - age})`; ctx.shadowColor = "rgb(255,30,45)"; ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.arc(d.x, d.y, 2.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(d.x - 1.6, d.y); ctx.lineTo(d.x, d.y - tail); ctx.lineTo(d.x + 1.6, d.y); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+  ctx.lineCap = "butt";
+}
+
 // very light snowfall in december
 const FLAKES = XMAS ? Array.from({ length: 36 }, () => ({
   x: Math.random(), y: Math.random(), v: 0.02 + 0.03 * Math.random(),
@@ -683,6 +833,7 @@ function drawRadar(t, dt) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
   if (XMAS) drawSnow(t, dt);
+  if (DROPS.length || SPRAY.length || SPLATS.length) drawDrops(t, dt);
 
   // invisible sweep: blips flare as it passes, no radar drawn
   sweep = (sweep + dt * 1.4) % (Math.PI * 2);
@@ -721,6 +872,21 @@ function drawRadar(t, dt) {
       ctx.beginPath(); ctx.arc(x, y, size + 4 + k * 22, 0, Math.PI * 2); ctx.stroke();
     }
 
+    const nf = fresh(p);
+    if (nf) {
+      // fresh target: slow azure sonar ping, plus one satellite per recent bastone orbiting the blip
+      const k = ((t + p.id * 397) % 2400) / 2400;
+      ctx.strokeStyle = `rgba(${AZURE},${0.75 * (1 - k)})`; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(x, y, size + 5 + k * 32, 0, Math.PI * 2); ctx.stroke();
+      const n = Math.min(nf, 8), orb = size + 6;
+      ctx.fillStyle = `rgb(${AZURE})`; ctx.shadowColor = `rgb(${AZURE})`; ctx.shadowBlur = 8;
+      for (let j = 0; j < n; j++) {
+        const a = t / 650 + j * Math.PI * 2 / n;
+        ctx.beginPath(); ctx.arc(x + Math.cos(a) * orb, y + Math.sin(a) * orb, 1.6, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+    }
+
     ctx.shadowColor = `rgb(${col})`; ctx.shadowBlur = 14 * glow;
     ctx.fillStyle = `rgba(${col},${glow})`;
     ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI * 2); ctx.fill();
@@ -736,7 +902,15 @@ function drawRadar(t, dt) {
     ctx.shadowBlur = 0;
     ctx.fillStyle = `rgba(${col},${Math.max(0.45, glow * 0.9)})`;
     ctx.font = `bold 15px "Share Tech Mono", monospace`;
-    ctx.fillText(String(val(p)).padStart(2, "0"), lx, y + 8);
+    const num = String(val(p)).padStart(2, "0");
+    ctx.fillText(num, lx, y + 8);
+    if (nf) {
+      const w = ctx.measureText(num).width;
+      ctx.font = `13px "Share Tech Mono", monospace`;
+      ctx.fillStyle = `rgb(${AZURE})`; ctx.shadowColor = `rgb(${AZURE})`; ctx.shadowBlur = 8;
+      ctx.fillText("+" + nf, right ? lx + w + 5 : lx - w - 5, y + 8);
+      ctx.shadowBlur = 0;
+    }
     ctx.font = `13px "Share Tech Mono", monospace`;
   }
 
@@ -787,11 +961,14 @@ function frame(t) {
   spin += dt * 0.9 * (1 + 5 * k);
   if (k !== boostK) {
     boostK = k;
-    hatEl.style.filter = furEl.style.filter = asciiEl.style.filter = k ? `brightness(${1 + 1.3 * k})` : "";
+    furEl.style.filter = asciiEl.style.filter = k ? `brightness(${1 + 1.3 * k})` : "";
+    // the red layer (hat, blood) only glows harder: brightening it would wash it out to pink
+    hatEl.style.textShadow = k ? `0 0 ${6 + 8 * k}px rgba(255, 30, 45, ${0.7 + 0.3 * k})` : "";
     asciiEl.style.textShadow = k ? `0 0 ${6 + 10 * k}px rgba(var(--hot-rgb), ${0.55 + 0.45 * k})` : "";
   }
   asciiAcc += dt;
   if (asciiAcc > 1 / 30) { asciiAcc = 0; M.key === "coats" ? renderSquid(t) : renderAscii(spin); }
+  if (SPOOKY && M.key !== "coats") bleed(t);
   drawRadar(t, dt);
   requestAnimationFrame(frame);
 }
@@ -854,7 +1031,7 @@ cv.addEventListener("pointerup", () => {
   if (pressId == null || longFired) { pressId = null; return; }
   const id = pressId; pressId = null;
   const p = players.find(q => q.id === id); if (!p) return;
-  p[M.key]++; layout();
+  p[M.key]++; if (M.key === "hits") p.recent = (p.recent || 0) + 1; layout();
   view.get(id)?.pings.push(performance.now());
   if (M.key !== "coats") { boostAt = performance.now(); drums(); } else jingle();
   navigator.vibrate?.(25);
@@ -866,7 +1043,7 @@ cv.addEventListener("contextmenu", e => e.preventDefault());
 function unhit(id) {
   if (!armed) return;
   const p = players.find(q => q.id === id);
-  if (p && val(p) > 0) { p[M.key]--; layout(); }
+  if (p && val(p) > 0) { p[M.key]--; if (M.key === "hits" && p.recent) p.recent--; layout(); }
   mutate(`/api/players/${id}/un${M.act}`, { method: "POST" });
 }
 menu.querySelector(".minus").addEventListener("click", () => {
@@ -1008,6 +1185,61 @@ function drumHit(out, t, hz, lvl, ring) {
     n.start(t, Math.random() * 0.2); n.stop(t + len + 0.01);
   }
 }
+
+/* ───────── bastoni log ───────── */
+const logEl = document.getElementById("log"), logBody = logEl.querySelector("tbody");
+const logSum = logEl.querySelector(".sum"), copyBtn = logEl.querySelector(".copy");
+let logRows = [];
+const when = at => {
+  const d = new Date(at * 1000), two = n => String(n).padStart(2, "0");
+  return [`${two(d.getDate())}/${two(d.getMonth() + 1)}/${d.getFullYear()}`, `${two(d.getHours())}:${two(d.getMinutes())}`];
+};
+function renderLog(msg) {
+  logBody.replaceChildren();
+  if (msg || !logRows.length) {
+    const tr = logBody.insertRow(), td = tr.insertCell();
+    td.colSpan = 4; td.className = "empty"; td.textContent = msg || "NESSUN BASTONE REGISTRATO";
+    logSum.textContent = ""; copyBtn.disabled = true;
+    return;
+  }
+  const since = Date.now() / 1000 - 15 * 3600;
+  logRows.forEach((r, i) => {
+    const tr = logBody.insertRow();
+    if (r.at > since) tr.className = "fresh";
+    for (const [txt, cls] of [[logRows.length - i, "n"], [r.name.toUpperCase()], ...when(r.at).map(x => [x])]) {
+      const td = tr.insertCell(); td.textContent = txt; if (cls) td.className = cls;
+    }
+  });
+  const recent = logRows.filter(r => r.at > since).length;
+  logSum.textContent = `${logRows.length} BASTONI` + (recent ? ` · ${recent} NELLE ULTIME 15 ORE` : "");
+  copyBtn.disabled = false;
+}
+async function openLog() {
+  closeMenu();
+  logEl.classList.add("open");
+  renderLog("CARICAMENTO…");
+  try { logRows = await api("/api/log"); renderLog(); }
+  catch (e) {
+    if (e.status === 401) { token = null; setArmed(false); logEl.classList.remove("open"); return; }
+    renderLog("ERRORE, RIPROVA");
+  }
+}
+// tab separated, so it pastes straight into a spreadsheet
+async function copyLog() {
+  const text = ["Nome\tData\tOra", ...logRows.map(r => [r.name, ...when(r.at)].join("\t"))].join("\n");
+  try { await navigator.clipboard.writeText(text); }
+  catch {
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.append(ta); ta.select(); document.execCommand("copy"); ta.remove();
+  }
+  copyBtn.textContent = "COPIATA ✓";
+  setTimeout(() => { copyBtn.textContent = "COPIA TABELLA"; }, 1500);
+}
+document.getElementById("logbtn").addEventListener("click", openLog);
+copyBtn.addEventListener("click", copyLog);
+logEl.querySelector(".x").addEventListener("click", () => logEl.classList.remove("open"));
+logEl.addEventListener("pointerdown", e => { if (e.target === logEl) logEl.classList.remove("open"); });
+addEventListener("keydown", e => { if (e.key === "Escape") logEl.classList.remove("open"); });
 
 /* ───────── star popup ───────── */
 const starEl = document.getElementById("star");

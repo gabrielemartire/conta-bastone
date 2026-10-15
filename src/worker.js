@@ -17,7 +17,10 @@ async function authorized(request, env) {
 
 const list = async (env) => {
   const { results } = await env.DB.prepare(
-    "SELECT id, name, hits, coats FROM players ORDER BY created_at, id"
+    // recent: bastoni given in the last 15 hours
+    `SELECT id, name, hits, coats,
+       (SELECT COUNT(*) FROM hit_log h WHERE h.player_id = p.id AND h.at > unixepoch() - 15 * 3600) AS recent
+     FROM players p ORDER BY created_at, id`
   ).all();
   return json(results);
 };
@@ -38,6 +41,14 @@ export default {
 
     if (pathname === "/api/auth") return json({ ok: true });
 
+    // who got each bastone and when, newest first
+    if (pathname === "/api/log" && method === "GET") {
+      const { results } = await env.DB.prepare(
+        "SELECT h.at, p.name FROM hit_log h JOIN players p ON p.id = h.player_id ORDER BY h.at DESC, h.id DESC LIMIT 1000"
+      ).all();
+      return json(results);
+    }
+
     if (pathname === "/api/players" && method === "POST") {
       const body = await request.json().catch(() => ({}));
       const name = String(body.name ?? "").trim().slice(0, 24);
@@ -50,13 +61,24 @@ export default {
     if (m) {
       const id = Number(m[1]);
       if (method === "DELETE" && !m[3]) {
-        await env.DB.prepare("DELETE FROM players WHERE id = ?").bind(id).run();
+        await env.DB.batch([
+          env.DB.prepare("DELETE FROM players WHERE id = ?").bind(id),
+          env.DB.prepare("DELETE FROM hit_log WHERE player_id = ?").bind(id),
+        ]);
         return list(env);
       }
       if (method === "POST" && m[3]) {
         const col = m[3] === "hit" ? "hits" : "coats"; // whitelisted by the regex
         const expr = m[2] ? `MAX(${col} - 1, 0)` : `${col} + 1`;
-        await env.DB.prepare(`UPDATE players SET ${col} = ${expr} WHERE id = ?`).bind(id).run();
+        const update = env.DB.prepare(`UPDATE players SET ${col} = ${expr} WHERE id = ?`).bind(id);
+        if (col === "coats") await update.run();
+        else await env.DB.batch([
+          update,
+          // log every bastone; taking one back removes the latest
+          m[2]
+            ? env.DB.prepare("DELETE FROM hit_log WHERE id = (SELECT id FROM hit_log WHERE player_id = ? ORDER BY at DESC, id DESC LIMIT 1)").bind(id)
+            : env.DB.prepare("INSERT INTO hit_log (player_id) VALUES (?)").bind(id),
+        ]);
         return list(env);
       }
     }
