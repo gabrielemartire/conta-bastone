@@ -23,6 +23,8 @@
   }
   body.coat { --hot-rgb: 42, 246, 255; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  /* stop phone browsers from enlarging the ascii text: the club would get wider than measured and slide off to the right */
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   html, body {
     margin: 0; height: 100%; overflow: hidden;
     background: radial-gradient(ellipse at center, #04201a 0%, var(--bg) 70%);
