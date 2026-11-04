@@ -64,6 +64,8 @@
   #hat, #fur { position: fixed; left: 0; top: 0; margin: 0; font: 9px/9px var(--font); white-space: pre; pointer-events: none; }
   #hat { color: rgba(255, 45, 55, .8); text-shadow: 0 0 6px rgba(255, 45, 55, .7); }
   #fur { color: rgba(255, 255, 255, .85); text-shadow: 0 0 6px rgba(255, 255, 255, .6); }
+  /* lucille: the fur layer turns to steel wire */
+  body.wire #fur { color: rgba(200, 214, 226, .9); text-shadow: 0 0 5px rgba(150, 190, 230, .6); }
   /* halloween: a pumpkin with the github cat carved in takes the logo's place; now and then the cat lights up */
   #lock .pk { display: none; }
   #lock .pk .cat { fill: var(--bg); }
@@ -300,9 +302,15 @@
 const params = new URLSearchParams(location.hash.slice(1) || location.search.slice(1));
 // christmas dress-up from 1 december to the epiphany (or ?xmas to preview)
 const XMAS = params.has("xmas") || (d => d.getMonth() === 11 || (d.getMonth() === 0 && d.getDate() <= 6))(new Date());
+// 5 november only: a guy fawkes mask over the club, no blood (or ?vendetta to preview)
+const VENDETTA = params.has("vendetta") || (d => d.getMonth() === 10 && d.getDate() === 5)(new Date());
 // halloween from 13 october to 4 november (or ?halloween to preview): pumpkin logo, blood on the club
-const SPOOKY = params.has("halloween") || (d => (d.getMonth() === 9 && d.getDate() >= 13) || (d.getMonth() === 10 && d.getDate() <= 4))(new Date());
+const SPOOKY = !VENDETTA && (params.has("halloween") || (d => (d.getMonth() === 9 && d.getDate() >= 13) || (d.getMonth() === 10 && d.getDate() <= 4))(new Date()));
 if (SPOOKY) document.body.classList.add("spooky");
+// 6 to 20 november: barbed wire wrapped round the club, lucille style (or ?lucille to preview)
+const WIRE = !VENDETTA && (params.has("lucille") || (d => d.getMonth() === 10 && d.getDate() >= 6 && d.getDate() <= 20)(new Date()));
+if (WIRE) document.body.classList.add("wire");
+const LAYERS = XMAS || SPOOKY || VENDETTA || WIRE; // the club wears something drawn on the hat/fur layers
 let token = params.get("k") || (() => { try { return localStorage.getItem("k"); } catch { return null; } })();
 
 async function api(path, opts = {}) {
@@ -343,8 +351,9 @@ const val = p => p[M.key];
 /* ───────── ASCII ace of clubs (3D) ───────── */
 const asciiEl = document.getElementById("ascii");
 const hatEl = document.getElementById("hat"), furEl = document.getElementById("fur");
-let MAT = 0; // material of the points being added: 0 club, 1 red (hat felt, blood), 2 white fur
+let MAT = 0; // material of the points being added: 0 club, 1 red (hat felt, blood), 2 white fur, 3 nothing (mask holes), 4 wire, 5 barb
 const RAMP = ".,-~:;=!*#$@";
+const GLYPHS = RAMP + "-/|\\x"; // after the ramp: wire drawn as a thin line along its direction, then the barb
 const PTS = [];
 const add = (x, y, z, nx, ny, nz, two = false) => {
   const l = Math.hypot(nx, ny, nz) || 1;
@@ -392,6 +401,7 @@ for (const [t, a, dir, L, W] of [
   [0.93, 2.1, [-0.35, 1, 0.6], 0.32, 0.09],
   [0.8, 5.0, [0.5, 0.8, -1], 0.3, 0.085],
 ]) {
+  if (VENDETTA && Math.abs(a - 0.9) < 1.35) continue; // the leaves on the mask's side would poke through its face
   const r = radius(t), [ax, ay] = axisAt(t);
   const bx = ax + r * Math.cos(a), by = ay, bz = r * Math.sin(a);
   const dl = Math.hypot(...dir), d = dir.map(v => v / dl);
@@ -449,6 +459,48 @@ if (SPOOKY) {
       dt > -len && gap(a, A0 + off) < (dt < 0.03 - len ? 0.13 : 0.08)); // a fat drop at the end
     if (blob || drip) PTS[i + 6] = 1 << 1; // red, drawn on the hat layer
   }
+}
+// guy fawkes mask worn on the head of the club: white face, rosy cheeks, and the dark bits
+// (eye slits, arched brows, curly moustache, smile, goatee) as material 3, drawn as nothing at all
+if (VENDETTA) {
+  const A0 = 0.9, SPAN = 1.2, YC = 0.36, HH = 0.56, RM = radius(1) + 0.15;
+  const blob = (u, v, cu, cv, ru, rv) => ((u - cu) / ru) ** 2 + ((v - cv) / rv) ** 2 < 1;
+  for (let v = -1.14; v <= 1.25; v += 0.022)
+    for (let u = -1; u <= 1; u += 0.018) {
+      const au = Math.abs(u);
+      const hw = v > 0 ? Math.sqrt(Math.max(0, 1 - (v / 1.25) ** 2)) : 1 - 0.72 * v ** 4; // domed forehead, full cheeks down to a narrow chin
+      const goatee = v < -0.5 && au < 0.11 * (v + 1.14) / 0.64;
+      if (au > hw && !goatee) continue;
+      const brow = 0.5 + 0.32 * (au - 0.12) - 0.5 * (au - 0.42) ** 2;
+      const tache = -0.2 + 0.6 * (au - 0.04) ** 2 + 1.5 * Math.max(0, au - 0.5) ** 2; // ends curl up
+      const ink = goatee
+        || blob(au, v - 0.18 * (au - 0.38), 0.38, 0.27, 0.2, 0.08) // slanted eye slits
+        || (au > 0.12 && au < 0.72 && Math.abs(v - brow) < 0.055)
+        || (au > 0.03 && au < 0.7 && Math.abs(v - tache) < 0.1 * (1 - 0.55 * au))
+        || (au < 0.36 && Math.abs(v - (-0.44 + 0.4 * u * u)) < 0.04);
+      MAT = ink ? 3 : blob(au, v, 0.62, 0.12, 0.12, 0.1) ? 1 : 2;
+      const a = A0 + u * SPAN, nose = 0.07 * Math.exp(-(u * u / 0.015 + (v + 0.02) ** 2 / 0.06));
+      const r = RM - 0.06 * v * v + nose, y = YC + HH * v;
+      add(bend((y - Y0) / LEN) + r * Math.cos(a), y, r * Math.sin(a), Math.cos(a), 0.15 - 0.4 * v, Math.sin(a), true);
+    }
+  MAT = 0;
+}
+// lucille: strands of barbed wire wound round the top half of the club, -/|\ along the strand and an x for each barb;
+// wire points carry the strand's direction where the others carry their normal
+if (WIRE) {
+  for (const [t0, t1, turns, ph] of [[0.45, 0.96, 2.6, 0], [0.55, 0.92, -1.7, 2.2]]) {
+    const N = 1100;
+    const at = (s, dr = 0) => {
+      const t = t0 + (t1 - t0) * s, a = ph + turns * Math.PI * 2 * s, r = radius(t) + 0.025 + dr;
+      return [bend(t) + r * Math.cos(a), Y0 + LEN * t, r * Math.sin(a)];
+    };
+    for (let i = 0; i <= N; i++) {
+      const [x, y, z] = at(i / N), [x2, y2, z2] = at((i + 1) / N);
+      MAT = 4; add(x, y, z, x2 - x, y2 - y, z2 - z);
+      if (i % 50 === 25) { MAT = 5; add(...at(i / N, 0.02), 0, 1, 0); }
+    }
+  }
+  MAT = 0;
 }
 
 const LIGHT = (() => { const v = [-0.35, 0.55, -0.75], l = Math.hypot(...v); return v.map(x => x / l); })();
@@ -586,23 +638,28 @@ function renderAscii(A) {
     zbuf[k] = ooz;
     let lum = nx2 * LIGHT[0] + ny3 * LIGHT[1] + nz3 * LIGHT[2];
     const mat = PTS[i + 6] >> 1;
+    mbuf[k] = mat;
+    if (mat === 4) { // wire: pick the stroke that follows it on screen (y up, cells twice as tall as wide)
+      const d = ((Math.atan2(ny3 * 0.6, nx2) / Math.PI + 1.125) * 4 | 0) % 4;
+      cbuf[k] = 1 + RAMP.length + d; continue;
+    }
+    if (mat === 5) { cbuf[k] = 1 + RAMP.length + 4; continue; }
     if (PTS[i + 6] & 1) lum = Math.abs(lum);
     if (mat) lum = 0.35 + 0.65 * Math.max(0, lum); // the hat stays solid even in shade
     cbuf[k] = 1 + Math.max(0, Math.min(RAMP.length - 1, Math.floor(lum * RAMP.length)));
-    mbuf[k] = mat;
   }
   let out = "", hat = "", fur = "";
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const v = cbuf[r * cols + c], ch = v ? RAMP[v - 1] : " ", m = v ? mbuf[r * cols + c] : 0;
+      const v = cbuf[r * cols + c], ch = v ? GLYPHS[v - 1] : " ", m = v ? mbuf[r * cols + c] : 0;
       out += m ? " " : ch;
-      if (XMAS || SPOOKY) { hat += m === 1 ? ch : " "; fur += m === 2 ? ch : " "; }
+      if (LAYERS) { hat += m === 1 ? ch : " "; fur += m === 2 || m > 3 ? ch : " "; }
     }
     out += "\n";
-    if (XMAS || SPOOKY) { hat += "\n"; fur += "\n"; }
+    if (LAYERS) { hat += "\n"; fur += "\n"; }
   }
   asciiEl.textContent = out;
-  if (XMAS || SPOOKY) { hatEl.textContent = hat; furEl.textContent = fur; }
+  if (LAYERS) { hatEl.textContent = hat; furEl.textContent = fur; }
 }
 
 /* ───────── blips ───────── */
@@ -610,13 +667,15 @@ const cv = document.getElementById("radar");
 const rankEl = document.getElementById("rank");
 const ctx = cv.getContext("2d");
 let W, H, CX, CY, R, dpr;
-let rankMax = 0;
+let rankMax = 0, rankBox = null; // rankBox: where the list sits, radar labels keep out of it
 // when the list overflows, cut the last visible row in half so it's clear you can scroll
 function fitRank() {
   const h = rankEl.firstElementChild?.offsetHeight || 0;
   let max = rankMax;
   if (h && rankEl.scrollHeight > rankMax + 1) max = (Math.max(1, Math.floor(rankMax / h - 0.5)) + 0.5) * h;
   rankEl.style.maxHeight = max + "px";
+  const r = rankEl.getBoundingClientRect();
+  rankBox = r.height ? [r.left, r.top, r.right, r.bottom] : null;
   moreRank();
 }
 function moreRank() {
@@ -831,6 +890,60 @@ function drawSnow(t, dt) {
 
 function blipPos(v) { return [CX + Math.cos(v.a) * v.r, CY + Math.sin(v.a) * v.r]; }
 
+// with many names on a phone the labels pile up: the selected one and the top scores pick a free spot first
+// (beside the dot, or nudged up/down with a thin leader), the rest keep only their dot; the list has every name
+const SPOTS = [[1, 0], [-1, 0], [1, -17], [-1, -17], [1, 17], [-1, 17], [1, -32], [-1, -32], [1, 32], [-1, 32]];
+const clip = s => s.length > 10 ? s.slice(0, 9) + "…" : s;
+function drawLabels(ls) {
+  const taken = ls.map(l => [l.x - l.size - 3, l.y - l.size - 3, l.x + l.size + 3, l.y + l.size + 3]);
+  if (rankBox) taken.push(rankBox);
+  const free = b => b[0] > 2 && b[2] < W - 2 && b[1] > 2 && b[3] < H - 2 &&
+    !taken.some(o => b[0] < o[2] && b[2] > o[0] && b[1] < o[3] && b[3] > o[1]);
+  ls.sort((a, b) => (b.p.id === hl) - (a.p.id === hl) || b.v.lead - a.v.lead || val(b.p) - val(a.p));
+  for (const l of ls) {
+    const { p, v, x, y, size, col, glow, nf } = l, on = hl === p.id;
+    const name = clip(p.name.toUpperCase()), num = String(val(p)).padStart(2, "0");
+    ctx.font = `13px "Share Tech Mono", monospace`;
+    const nw = ctx.measureText(name).width, fw = nf ? ctx.measureText("+" + nf).width + 5 : 0;
+    ctx.font = `bold 15px "Share Tech Mono", monospace`;
+    const mw = ctx.measureText(num).width, w = Math.max(nw, mw + fw);
+    const inward = x <= CX ? 1 : -1;
+    const box = ([side, dy]) => {
+      const lx = x + side * (size + 8), x0 = side > 0 ? lx : lx - w;
+      return [x0 - 2, y + dy - 15, x0 + w + 2, y + dy + 16];
+    };
+    // try last frame's spot first so labels don't hop around while the blips glide
+    const tries = v.spot ? [v.spot, ...SPOTS] : SPOTS;
+    let spot = null;
+    for (const [s, dy] of tries) if (free(box([s * inward, dy]))) { spot = [s, dy]; break; }
+    if (!spot && on) spot = [1, 0];
+    v.spot = spot;
+    if (!spot) continue;
+    const side = spot[0] * inward, dy = spot[1], lx = x + side * (size + 8);
+    taken.push(box([side, dy]));
+    if (dy) {
+      ctx.strokeStyle = `rgba(${col},0.35)`; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x + side * size, y); ctx.lineTo(lx - side * 3, y + dy); ctx.stroke();
+    }
+    ctx.textAlign = side > 0 ? "left" : "right";
+    ctx.font = `13px "Share Tech Mono", monospace`;
+    ctx.fillStyle = on ? "#fff" : `rgba(${col},${Math.max(0.6, glow)})`;
+    if (on) { ctx.shadowColor = `rgb(${col})`; ctx.shadowBlur = 10; }
+    ctx.fillText(name, lx, y + dy - 7);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = `rgba(${col},${Math.max(0.45, glow * 0.9)})`;
+    ctx.font = `bold 15px "Share Tech Mono", monospace`;
+    ctx.fillText(num, lx, y + dy + 8);
+    if (nf) {
+      ctx.font = `13px "Share Tech Mono", monospace`;
+      ctx.fillStyle = `rgb(${AZURE})`; ctx.shadowColor = `rgb(${AZURE})`; ctx.shadowBlur = 8;
+      ctx.fillText("+" + nf, side > 0 ? lx + mw + 5 : lx - mw - 5, y + dy + 8);
+      ctx.shadowBlur = 0;
+    }
+  }
+  ctx.font = `13px "Share Tech Mono", monospace`;
+}
+
 function drawRadar(t, dt) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
@@ -843,6 +956,7 @@ function drawRadar(t, dt) {
   // blips
   ctx.font = `13px "Share Tech Mono", monospace`;
   ctx.textBaseline = "middle";
+  const labels = [];
   for (const p of players) {
     const v = view.get(p.id);
     if (!v) continue;
@@ -894,27 +1008,9 @@ function drawRadar(t, dt) {
     ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI * 2); ctx.fill();
     ctx.shadowBlur = 0;
 
-    const right = x <= CX;
-    ctx.textAlign = right ? "left" : "right";
-    const lx = x + (right ? size + 8 : -size - 8);
-    const on = hl === p.id;
-    ctx.fillStyle = on ? "#fff" : `rgba(${col},${Math.max(0.6, glow)})`;
-    if (on) { ctx.shadowColor = `rgb(${col})`; ctx.shadowBlur = 10; }
-    ctx.fillText(p.name.toUpperCase(), lx, y - 7);
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = `rgba(${col},${Math.max(0.45, glow * 0.9)})`;
-    ctx.font = `bold 15px "Share Tech Mono", monospace`;
-    const num = String(val(p)).padStart(2, "0");
-    ctx.fillText(num, lx, y + 8);
-    if (nf) {
-      const w = ctx.measureText(num).width;
-      ctx.font = `13px "Share Tech Mono", monospace`;
-      ctx.fillStyle = `rgb(${AZURE})`; ctx.shadowColor = `rgb(${AZURE})`; ctx.shadowBlur = 8;
-      ctx.fillText("+" + nf, right ? lx + w + 5 : lx - w - 5, y + 8);
-      ctx.shadowBlur = 0;
-    }
-    ctx.font = `13px "Share Tech Mono", monospace`;
+    labels.push({ p, v, x, y, size, col, glow, nf });
   }
+  drawLabels(labels);
 
   // lock-on for highlighted target
   const hv = hl != null && view.get(hl);
@@ -1096,6 +1192,8 @@ for (const n of [36, 48, 84, 88]) JINGLE.push(["triangle", n, 3.5, 2.5]);
   ns.forEach((n, j) => JINGLE.push(["triangle", n, at + j * .125, .3])));
 let actx = null, jingleOut = null, noiseBuf = null;
 function audioBus(vol, gritty) {
+  // iPhone: ambient sound, so the silent switch mutes the drums and the jingle (Safari 17+)
+  if (navigator.audioSession) navigator.audioSession.type = "ambient";
   actx ??= new (window.AudioContext || window.webkitAudioContext)();
   actx.resume();
   jingleOut?.disconnect(); // a new hit cuts the one still playing
@@ -1141,11 +1239,12 @@ function jingle() {
     }
   } catch {}
 }
-// war drums: TUM-turutum TUM-turutum TUM! The two groups are identical. [start s, pitch Hz, level, ring s]
-const DRUMS = [];
-for (const t of [0, .82])
-  DRUMS.push([t, 46, 1, .55], [t + .25, 88, .48, .14], [t + .375, 80, .54, .14], [t + .5, 58, .72, .3]);
-DRUMS.push([1.64, 38, 1, 2.6]); // one closing blow, left to rumble
+// war drums on the beat of "am-mazza la vec-chia... col FLIT!" (shave and a haircut), the last blow left to rumble
+// [start s, pitch Hz, level, ring s]
+const DRUMS = [
+  [0, 58, .9, .4], [.24, 84, .5, .14], [.36, 84, .5, .14], [.48, 70, .65, .2], [.72, 62, .8, .3],
+  [1.2, 52, .9, .35], [1.44, 38, 1, 2.6],
+];
 function drums() {
   try {
     const out = audioBus(0.7, true), t0 = actx.currentTime + 0.02;
